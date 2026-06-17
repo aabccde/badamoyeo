@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.comment.mapper.CommentMapper">
+	<select id="existsActivePost" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM posts
+			WHERE id = #{postId}
+				AND status = 'ACTIVE'
+		)
+	</select>
+
+	<insert id="insertComment" parameterType="badamoyeo_api.comment.dto.CommentCreateCommand"
+		useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO comments (
+			post_id,
+			user_id,
+			parent_comment_id,
+			content
+		)
+		VALUES (
+			#{postId},
+			#{userId},
+			#{parentCommentId},
+			#{content}
+		)
+	</insert>
+
+	<select id="findComment" resultType="badamoyeo_api.comment.dto.CommentRow">
+		SELECT
+			c.id AS commentId,
+			c.post_id AS postId,
+			c.parent_comment_id AS parentCommentId,
+			u.id AS writerId,
+			u.nickname AS writerNickname,
+			u.profile_image_url AS writerProfileImageUrl,
+			c.content,
+			c.status,
+			c.created_at AS createdAt,
+			c.updated_at AS updatedAt
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.id = #{commentId}
+	</select>
+
+	<select id="findCommentsByPost" resultType="badamoyeo_api.comment.dto.CommentRow">
+		SELECT
+			c.id AS commentId,
+			c.post_id AS postId,
+			c.parent_comment_id AS parentCommentId,
+			u.id AS writerId,
+			u.nickname AS writerNickname,
+			u.profile_image_url AS writerProfileImageUrl,
+			c.content,
+			c.status,
+			c.created_at AS createdAt,
+			c.updated_at AS updatedAt
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.post_id = #{postId}
+		ORDER BY
+			CASE WHEN c.parent_comment_id IS NULL THEN c.id ELSE c.parent_comment_id END ASC,
+			c.parent_comment_id IS NOT NULL ASC,
+			c.created_at ASC,
+			c.id ASC
+	</select>
+
+	<update id="updateComment">
+		UPDATE comments
+		SET content = #{content}
+		WHERE id = #{commentId}
+			AND status = 'ACTIVE'
+	</update>
+
+	<update id="deleteComment">
+		UPDATE comments
+		SET status = 'DELETED'
+		WHERE id = #{commentId}
+			AND status = 'ACTIVE'
+	</update>
+
+	<update id="incrementPostCommentCount">
+		UPDATE posts
+		SET comment_count = comment_count + 1
+		WHERE id = #{postId}
+			AND status = 'ACTIVE'
+	</update>
+
+	<update id="decrementPostCommentCount">
+		UPDATE posts
+		SET comment_count = GREATEST(comment_count - 1, 0)
+		WHERE id = #{postId}
+			AND status = 'ACTIVE'
+	</update>
+</mapper>
