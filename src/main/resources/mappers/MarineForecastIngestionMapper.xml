@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.ingestion.mapper.MarineForecastIngestionMapper">
+
+	<select id="findSpotId" resultType="long">
+		SELECT id
+		FROM spots
+		WHERE experience = #{experience}
+			AND name = #{name}
+		LIMIT 1
+	</select>
+
+	<insert id="insertSpot">
+		INSERT INTO spots (
+			experience,
+			name,
+			lat,
+			lng,
+			external_place_code,
+			external_place_name,
+			region
+		)
+		VALUES (
+			#{experience},
+			#{name},
+			#{lat},
+			#{lng},
+			#{externalPlaceCode},
+			#{externalPlaceName},
+			#{region}
+		)
+	</insert>
+
+	<update id="updateSpot">
+		UPDATE spots
+		SET lat = #{lat},
+			lng = #{lng},
+			external_place_code = #{externalPlaceCode},
+			external_place_name = #{externalPlaceName},
+			region = #{region},
+			active = 1
+		WHERE experience = #{experience}
+			AND name = #{name}
+	</update>
+
+	<insert id="upsertSpots">
+		INSERT INTO spots (
+			experience,
+			name,
+			lat,
+			lng,
+			external_place_code,
+			external_place_name,
+			region
+		)
+		VALUES
+		<foreach collection="spots" item="spot" separator=",">
+			(
+				#{spot.experience},
+				#{spot.name},
+				#{spot.lat},
+				#{spot.lng},
+				#{spot.externalPlaceCode},
+				#{spot.externalPlaceName},
+				#{spot.region}
+			)
+		</foreach>
+		ON DUPLICATE KEY UPDATE
+			lat = VALUES(lat),
+			lng = VALUES(lng),
+			external_place_code = VALUES(external_place_code),
+			external_place_name = VALUES(external_place_name),
+			region = VALUES(region),
+			active = 1
+	</insert>
+
+	<select id="findSpotIds" resultType="badamoyeo_api.ingestion.dto.SpotIdLookup">
+		SELECT
+			id AS spotId,
+			experience,
+			name
+		FROM spots
+		WHERE (experience, name) IN
+		<foreach collection="spots" item="spot" open="(" separator="," close=")">
+			(#{spot.experience}, #{spot.name})
+		</foreach>
+	</select>
+
+	<insert id="upsertForecast">
+		INSERT INTO marine_forecasts (
+			spot_id,
+			experience,
+			forecast_date,
+			time_slot,
+			total_index,
+			weather,
+			tide,
+			variant_key,
+			metrics,
+			raw_data
+		)
+		VALUES (
+			#{spotId},
+			#{experience},
+			#{forecastDate},
+			#{timeSlot},
+			#{totalIndex},
+			#{weather},
+			#{tide},
+			#{variantKey},
+			#{metricsJson},
+			#{rawDataJson}
+		)
+		ON DUPLICATE KEY UPDATE
+			total_index = VALUES(total_index),
+			weather = VALUES(weather),
+			tide = VALUES(tide),
+			metrics = VALUES(metrics),
+			raw_data = VALUES(raw_data)
+	</insert>
+
+	<insert id="upsertForecasts">
+		INSERT INTO marine_forecasts (
+			spot_id,
+			experience,
+			forecast_date,
+			time_slot,
+			total_index,
+			weather,
+			tide,
+			variant_key,
+			metrics,
+			raw_data
+		)
+		VALUES
+		<foreach collection="forecasts" item="forecast" separator=",">
+			(
+				#{forecast.spotId},
+				#{forecast.experience},
+				#{forecast.forecastDate},
+				#{forecast.timeSlot},
+				#{forecast.totalIndex},
+				#{forecast.weather},
+				#{forecast.tide},
+				#{forecast.variantKey},
+				#{forecast.metricsJson},
+				#{forecast.rawDataJson}
+			)
+		</foreach>
+		ON DUPLICATE KEY UPDATE
+			total_index = VALUES(total_index),
+			weather = VALUES(weather),
+			tide = VALUES(tide),
+			metrics = VALUES(metrics),
+			raw_data = VALUES(raw_data)
+	</insert>
+</mapper>

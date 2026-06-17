@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.auth.mapper.AuthMapper">
+	<select id="existsByEmail" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM users
+			WHERE email = #{email}
+		)
+	</select>
+
+	<select id="existsByNickname" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM users
+			WHERE nickname = #{nickname}
+		)
+	</select>
+
+	<insert id="insertLocalUser">
+		INSERT INTO users (
+			email,
+			password,
+			nickname,
+			provider,
+			role,
+			status
+		)
+		VALUES (
+			#{request.email},
+			#{encodedPassword},
+			#{request.nickname},
+			'LOCAL',
+			'USER',
+			'ACTIVE'
+		)
+	</insert>
+
+	<insert id="insertOAuthUser">
+		INSERT INTO users (
+			email,
+			password,
+			nickname,
+			profile_image_url,
+			provider,
+			provider_id,
+			role,
+			status
+		)
+		VALUES (
+			#{user.email},
+			NULL,
+			#{nickname},
+			#{user.profileImageUrl},
+			#{user.provider},
+			#{user.providerId},
+			'USER',
+			'ACTIVE'
+		)
+	</insert>
+
+	<select id="findByEmail" resultType="badamoyeo_api.auth.dto.UserAuthInfo">
+		SELECT
+			id AS userId,
+			email,
+			password,
+			nickname,
+			profile_image_url AS profileImageUrl,
+			provider,
+			role,
+			status
+		FROM users
+		WHERE email = #{email}
+	</select>
+
+	<select id="findById" resultType="badamoyeo_api.auth.dto.UserAuthInfo">
+		SELECT
+			id AS userId,
+			email,
+			password,
+			nickname,
+			profile_image_url AS profileImageUrl,
+			provider,
+			role,
+			status
+		FROM users
+		WHERE id = #{userId}
+	</select>
+
+	<select id="findByProvider" resultType="badamoyeo_api.auth.dto.UserAuthInfo">
+		SELECT
+			id AS userId,
+			email,
+			password,
+			nickname,
+			profile_image_url AS profileImageUrl,
+			provider,
+			role,
+			status
+		FROM users
+		WHERE provider = #{provider}
+			AND provider_id = #{providerId}
+	</select>
+
+	<insert id="insertRefreshToken">
+		INSERT INTO refresh_tokens (
+			user_id,
+			token,
+			expires_at,
+			revoked
+		)
+		VALUES (
+			#{userId},
+			#{token},
+			#{expiresAt},
+			0
+		)
+	</insert>
+
+	<select id="findRefreshToken" resultType="badamoyeo_api.auth.dto.RefreshTokenRecord">
+		SELECT
+			id,
+			user_id AS userId,
+			token,
+			expires_at AS expiresAt,
+			revoked
+		FROM refresh_tokens
+		WHERE token = #{token}
+	</select>
+
+	<update id="revokeRefreshToken">
+		UPDATE refresh_tokens
+		SET revoked = 1
+		WHERE token = #{token}
+	</update>
+</mapper>

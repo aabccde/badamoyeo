@@ -1,93 +1,160 @@
-# pjn_final_대전_4반_최민서_박준유
+# Badamoyeo API
 
+바다모여 서비스의 Spring Boot 백엔드 API입니다. 해양 예보 공공데이터를 수집하고, 대시보드/스팟/게시글/댓글/즐겨찾기/사용자 인증 API를 제공합니다.
 
+## 기술 스택
 
-## Getting started
+- Java 21
+- Spring Boot 4
+- Spring Security
+- MyBatis
+- MySQL
+- Gradle
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 실행 준비
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+MySQL 데이터베이스를 준비한 뒤 `docs/schema.sql`을 실행해 테이블을 생성합니다.
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+```bash
+mysql -u {user} -p {database} < docs/schema.sql
 ```
-cd existing_repo
-git remote add origin https://lab.ssafy.com/pjy008008/pjn_final_d4_t05.git
-git branch -M master
-git push -uf origin master
+
+로컬 기본값은 아래와 같습니다.
+
+```properties
+DB_URL=jdbc:mysql://127.0.0.1:3306/badamoyeo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+DB_USERNAME=ssafy
+DB_PASSWORD=ssafy
 ```
 
-## Integrate with your tools
+## 환경변수
 
-- [ ] [Set up project integrations](https://lab.ssafy.com/pjy008008/pjn_final_d4_t05/-/settings/integrations)
+필요한 값은 실행 환경에서 직접 설정합니다. 비밀값은 Git에 올리지 않습니다.
 
-## Collaborate with your team
+```bash
+DB_URL=...
+DB_USERNAME=...
+DB_PASSWORD=...
+JWT_SECRET=...
+OPENAPI_MARINE_SERVICE_KEY=...
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+OAuth를 사용할 경우 아래 값도 설정합니다.
 
-## Test and Deploy
+```bash
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+KAKAO_OAUTH_CLIENT_ID=...
+KAKAO_OAUTH_CLIENT_SECRET=...
+NAVER_OAUTH_CLIENT_ID=...
+NAVER_OAUTH_CLIENT_SECRET=...
+```
 
-Use the built-in continuous integration in GitLab.
+운영 HTTPS 환경에서는 refresh token cookie 보안을 위해 아래 값을 권장합니다.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```bash
+REFRESH_TOKEN_COOKIE_SECURE=true
+```
 
-***
+## 실행
 
-# Editing this README
+```bash
+./gradlew bootRun
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+서버 기본 주소는 아래와 같습니다.
 
-## Suggestions for a good README
+```text
+http://localhost:8080/api
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## 테스트
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+./gradlew test
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## 인증 방식
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+로그인과 회원가입 응답 body에는 `accessToken`이 내려갑니다. 프론트엔드는 이후 요청에 아래 헤더를 보냅니다.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```http
+Authorization: Bearer {accessToken}
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+`refreshToken`은 JSON body에 노출하지 않고 `HttpOnly` cookie로 전달합니다. refresh/logout 요청은 cookie를 사용하므로 프론트엔드에서 credentials 설정이 필요합니다.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```js
+fetch("/api/auth/refresh", {
+  method: "POST",
+  credentials: "include"
+});
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## 해양 예보 수집
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+아래 6개 경험치 데이터를 공공 API에서 수집합니다.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+- `seaTravel`
+- `swimming`
+- `mudflat`
+- `scuba`
+- `fishing`
+- `surfing`
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+서버 시작 시 수집이 실행되도록 설정되어 있습니다.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```properties
+openapi.marine.ingestion.enabled=true
+openapi.marine.ingestion.run-on-startup=true
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+공공 API가 간헐적으로 `UNKNOWN_ERROR`를 반환할 수 있어 수집 로직은 큰 페이지부터 빠르게 요청하고, 실패한 구간만 작은 페이지로 나누어 재시도합니다.
 
-## License
-For open source projects, say how it is licensed.
+```text
+300 -> 100 -> 50 -> 10
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+각 단계는 최대 3번 재시도합니다. 한 경험치 수집이 끝까지 실패해도 다음 경험치 수집은 계속 진행됩니다.
+
+관리자 수동 수집 API:
+
+```http
+POST /api/admin/ingest/marine-forecasts
+```
+
+## DB 문서
+
+- `docs/schema.sql`: 신규 DB 생성용 스키마
+- `docs/ingestion-optimization.sql`: 기존 DB 보정용 SQL
+
+## Postman
+
+Postman 컬렉션을 공유할 경우 `docs/postman/` 아래에 두는 것을 권장합니다.
+
+권장 환경 변수:
+
+```text
+baseUrl=http://localhost:8080/api
+accessToken=
+spotId=76
+postId=1
+commentId=1
+provider=google
+```
+
+컬렉션 또는 환경 파일에는 access token, refresh token, API key 같은 비밀값을 저장하지 않습니다.
+
+## Git에 올리지 않는 파일
+
+아래 파일은 로컬 실행 산출물이거나 비밀값을 포함할 수 있어 Git에 올리지 않습니다.
+
+```text
+build/
+.gradle/
+.idea/
+uploads/
+.env
+.env.*
+```

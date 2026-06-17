@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.spot.mapper.SpotMapper">
+
+	<sql id="latestForecastJoin">
+		LEFT JOIN marine_forecasts mf
+			ON mf.spot_id = s.id
+			AND (#{targetDate} IS NULL OR mf.forecast_date = #{targetDate})
+			AND mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = s.id
+				<if test="targetDate != null">
+					AND mf2.forecast_date = #{targetDate}
+				</if>
+				ORDER BY mf2.forecast_date DESC, mf2.time_slot ASC, mf2.id ASC
+				LIMIT 1
+			)
+	</sql>
+
+	<select id="findMarkers" resultType="badamoyeo_api.dashboard.dto.MarkerResponse">
+		SELECT
+			s.id AS spotId,
+			s.name AS spotName,
+			s.lat,
+			s.lng,
+			mf.total_index AS totalIndex,
+			s.experience
+		FROM spots s
+		<include refid="latestForecastJoin" />
+		WHERE s.active = 1
+			AND s.experience = #{experience}
+		ORDER BY s.name ASC
+	</select>
+
+	<select id="findSpotCards" resultType="badamoyeo_api.spot.dto.SpotCardResponse">
+		SELECT
+			s.id AS spotId,
+			s.experience,
+			s.name AS spotName,
+			s.lat,
+			s.lng,
+			s.region,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			s.post_count AS postCount,
+			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
+			CAST(mf.metrics AS CHAR) AS metrics
+		FROM spots s
+		<include refid="latestForecastJoin" />
+		LEFT JOIN favorite_spots fs
+			ON fs.spot_id = s.id
+			AND fs.user_id = #{userId}
+		WHERE s.active = 1
+			AND s.experience = #{experience}
+		<if test="region != null and region != ''">
+			AND s.region = #{region}
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND s.name LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+		<choose>
+			<when test="sort == 'community'">
+				ORDER BY s.post_count DESC, s.name ASC
+			</when>
+			<when test="sort == 'nearby' and userLat != null and userLng != null">
+				ORDER BY POW(s.lat - #{userLat}, 2) + POW(s.lng - #{userLng}, 2), s.name ASC
+			</when>
+			<otherwise>
+				ORDER BY
+					CASE mf.total_index
+						WHEN '매우좋음' THEN 5
+						WHEN '좋음' THEN 4
+						WHEN '보통' THEN 3
+						WHEN '나쁨' THEN 2
+						WHEN '매우나쁨' THEN 1
+						ELSE 0
+					END DESC,
+					s.name ASC
+			</otherwise>
+		</choose>
+		LIMIT #{limit} OFFSET #{offset}
+	</select>
+
+	<select id="countSpotCards" resultType="long">
+		SELECT COUNT(*)
+		FROM spots s
+		WHERE s.active = 1
+			AND s.experience = #{experience}
+		<if test="region != null and region != ''">
+			AND s.region = #{region}
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND s.name LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+	</select>
+
+	<select id="findSpotDetail" resultType="badamoyeo_api.spot.dto.SpotDetailResponse">
+		SELECT
+			s.id AS spotId,
+			s.experience,
+			s.name AS spotName,
+			s.lat,
+			s.lng,
+			s.region,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			mf.weather,
+			mf.tide,
+			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
+			CAST(mf.metrics AS CHAR) AS metrics,
+			CAST(mf.raw_data AS CHAR) AS rawData
+		FROM spots s
+		<include refid="latestForecastJoin" />
+		LEFT JOIN favorite_spots fs
+			ON fs.spot_id = s.id
+			AND fs.user_id = #{userId}
+		WHERE s.active = 1
+			AND s.id = #{spotId}
+	</select>
+
+	<select id="existsActiveSpot" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM spots
+			WHERE id = #{spotId}
+				AND active = 1
+		)
+	</select>
+
+	<insert id="insertFavorite">
+		INSERT IGNORE INTO favorite_spots (spot_id, user_id)
+		VALUES (#{spotId}, #{userId})
+	</insert>
+
+	<delete id="deleteFavorite">
+		DELETE FROM favorite_spots
+		WHERE spot_id = #{spotId}
+			AND user_id = #{userId}
+	</delete>
+</mapper>

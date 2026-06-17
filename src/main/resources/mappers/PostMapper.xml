@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.post.mapper.PostMapper">
+	<select id="existsActiveSpot" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM spots
+			WHERE id = #{spotId}
+				AND active = 1
+		)
+	</select>
+
+	<insert id="insertPost" parameterType="badamoyeo_api.post.dto.PostInsertCommand"
+		useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO posts (
+			spot_id,
+			user_id,
+			title,
+			content
+		)
+		VALUES (
+			#{spotId},
+			#{userId},
+			#{title},
+			#{content}
+		)
+	</insert>
+
+	<update id="updatePost">
+		UPDATE posts
+		SET title = #{request.title},
+			content = #{request.content}
+		WHERE id = #{postId}
+			AND status = 'ACTIVE'
+	</update>
+
+	<update id="deletePost">
+		UPDATE posts
+		SET status = 'DELETED'
+		WHERE id = #{postId}
+			AND status = 'ACTIVE'
+	</update>
+
+	<update id="incrementSpotPostCount">
+		UPDATE spots
+		SET post_count = post_count + 1
+		WHERE id = #{spotId}
+	</update>
+
+	<update id="decrementSpotPostCount">
+		UPDATE spots
+		SET post_count = GREATEST(post_count - 1, 0)
+		WHERE id = #{spotId}
+	</update>
+
+	<insert id="insertPostImage">
+		INSERT INTO post_images (
+			post_id,
+			image_url,
+			sort_order
+		)
+		VALUES (
+			#{postId},
+			#{imageUrl},
+			#{sortOrder}
+		)
+	</insert>
+
+	<delete id="deletePostImages">
+		DELETE FROM post_images
+		WHERE post_id = #{postId}
+	</delete>
+
+	<select id="findSpotPosts" resultType="badamoyeo_api.post.dto.PostListRow">
+		SELECT
+			p.id AS postId,
+			p.title,
+			(
+				SELECT pi.image_url
+				FROM post_images pi
+				WHERE pi.post_id = p.id
+				ORDER BY pi.sort_order ASC, pi.id ASC
+				LIMIT 1
+			) AS thumbnailUrl,
+			u.id AS writerId,
+			u.nickname AS writerNickname,
+			u.profile_image_url AS writerProfileImageUrl,
+			p.created_at AS createdAt,
+			p.comment_count AS commentCount,
+			p.like_count AS likeCount,
+			CASE WHEN pl.id IS NULL THEN FALSE ELSE TRUE END AS liked
+		FROM posts p
+		JOIN users u ON u.id = p.user_id
+		LEFT JOIN post_likes pl
+			ON pl.post_id = p.id
+			AND pl.user_id = #{userId}
+		WHERE p.status = 'ACTIVE'
+			AND p.spot_id = #{spotId}
+		ORDER BY p.created_at DESC, p.id DESC
+		LIMIT #{limit} OFFSET #{offset}
+	</select>
+
+	<select id="countSpotPosts" resultType="long">
+		SELECT COUNT(*)
+		FROM posts
+		WHERE status = 'ACTIVE'
+			AND spot_id = #{spotId}
+	</select>
+
+	<select id="findPost" resultType="badamoyeo_api.post.dto.PostRow">
+		SELECT
+			p.id AS postId,
+			p.spot_id AS spotId,
+			u.id AS writerId,
+			u.nickname AS writerNickname,
+			u.profile_image_url AS writerProfileImageUrl,
+			p.title,
+			p.content,
+			p.created_at AS createdAt,
+			p.updated_at AS updatedAt,
+			p.comment_count AS commentCount,
+			p.like_count AS likeCount,
+			CASE WHEN pl.id IS NULL THEN FALSE ELSE TRUE END AS liked
+		FROM posts p
+		JOIN users u ON u.id = p.user_id
+		LEFT JOIN post_likes pl
+			ON pl.post_id = p.id
+			AND pl.user_id = #{userId}
+		WHERE p.id = #{postId}
+			AND p.status = 'ACTIVE'
+	</select>
+
+	<select id="findPostImages" resultType="badamoyeo_api.post.dto.PostImageRow">
+		SELECT image_url AS imageUrl
+		FROM post_images
+		WHERE post_id = #{postId}
+		ORDER BY sort_order ASC, id ASC
+	</select>
+</mapper>
