@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="badamoyeo_api.ApiApplicationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-17T04:45:09.483Z" hostname="choeminseoui-MacBookPro.local" time="0.028">
+<testsuite name="badamoyeo_api.ApiApplicationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-18T06:53:26.663Z" hostname="JUNYOU" time="0.129">
   <properties/>
-  <testcase name="applicationClassExists()" classname="badamoyeo_api.ApiApplicationTests" time="0.024"/>
+  <testcase name="applicationClassExists()" classname="badamoyeo_api.ApiApplicationTests" time="0.107"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
