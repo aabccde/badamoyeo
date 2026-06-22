@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+build/
+
+# macOS
+.DS_Store
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Runtime uploads
+uploads/
+
+# Local environment and secrets
+.env
+.env.*
