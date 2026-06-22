@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.ai.mapper.AiSpotMapper">
+
+	<select id="searchSpots" resultType="badamoyeo_api.ai.dto.AiSpotSearchResult">
+		SELECT
+			s.id AS spotId,
+			s.name AS spotName,
+			s.experience,
+			s.region,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			mf.weather,
+			mf.tide,
+			s.post_count AS postCount,
+			CAST(mf.metrics AS CHAR) AS metrics
+		FROM spots s
+		LEFT JOIN marine_forecasts mf
+			ON mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = s.id
+				ORDER BY
+					CASE WHEN mf2.forecast_date &gt;= CURRENT_DATE THEN 0 ELSE 1 END,
+					ABS(DATEDIFF(mf2.forecast_date, CURRENT_DATE)),
+					mf2.forecast_date ASC,
+					mf2.time_slot ASC,
+					mf2.id ASC
+				LIMIT 1
+			)
+		WHERE s.active = 1
+		<if test="experience != null and experience != ''">
+			AND s.experience = #{experience}
+		</if>
+		<if test="region != null and region != ''">
+			AND s.region LIKE CONCAT('%', #{region}, '%')
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND s.name LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+		<choose>
+			<when test="sort == 'worst'">
+				ORDER BY
+					CASE mf.total_index
+						WHEN '매우나쁨' THEN 1
+						WHEN '나쁨' THEN 2
+						WHEN '보통' THEN 3
+						WHEN '좋음' THEN 4
+						WHEN '매우좋음' THEN 5
+						ELSE 6
+					END ASC,
+					s.name ASC
+			</when>
+			<when test="sort == 'community'">
+				ORDER BY s.post_count DESC, s.name ASC
+			</when>
+			<otherwise>
+				ORDER BY
+					CASE mf.total_index
+						WHEN '매우좋음' THEN 5
+						WHEN '좋음' THEN 4
+						WHEN '보통' THEN 3
+						WHEN '나쁨' THEN 2
+						WHEN '매우나쁨' THEN 1
+						ELSE 0
+					END DESC,
+					s.post_count DESC,
+					s.name ASC
+			</otherwise>
+		</choose>
+		LIMIT #{limit}
+	</select>
+</mapper>

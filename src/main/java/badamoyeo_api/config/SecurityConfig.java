@@ -40,6 +40,8 @@ public class SecurityConfig {
 					"/spots/*",
 					"/uploads/**"
 				).permitAll()
+				.requestMatchers(HttpMethod.GET, "/ai/spot-recommendations").permitAll()
+				.requestMatchers(HttpMethod.GET, "/spots/*/ai-analysis").permitAll()
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 				.requestMatchers(HttpMethod.GET, "/spots/*/posts").permitAll()
 				.requestMatchers(HttpMethod.GET, "/posts/*").permitAll()

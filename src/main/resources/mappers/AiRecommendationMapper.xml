@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.ai.recommendation.mapper.AiRecommendationMapper">
+
+	<select id="findRecommendationForecastDate" resultType="java.time.LocalDate">
+		SELECT COALESCE(
+			MIN(CASE WHEN forecast_date &gt;= #{baseDate} THEN forecast_date END),
+			MAX(forecast_date)
+		)
+		FROM marine_forecasts
+		WHERE experience = #{experience}
+	</select>
+
+	<select id="existsRecommendations" resultType="boolean">
+		SELECT EXISTS (
+			SELECT 1
+			FROM ai_spot_recommendations
+			WHERE experience = #{experience}
+				AND forecast_date = #{forecastDate}
+		)
+	</select>
+
+	<select id="findCandidates" resultType="badamoyeo_api.ai.recommendation.dto.AiRecommendationCandidate">
+		SELECT
+			s.id AS spotId,
+			s.name AS spotName,
+			s.region,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			mf.weather,
+			mf.tide,
+			s.post_count AS postCount,
+			CAST(mf.metrics AS CHAR) AS metrics
+		FROM spots s
+		JOIN marine_forecasts mf
+			ON mf.spot_id = s.id
+			AND mf.forecast_date = #{forecastDate}
+			AND mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = s.id
+					AND mf2.forecast_date = #{forecastDate}
+				ORDER BY mf2.time_slot ASC, mf2.id ASC
+				LIMIT 1
+			)
+		WHERE s.active = 1
+			AND s.experience = #{experience}
+		ORDER BY
+			CASE mf.total_index
+				WHEN '매우좋음' THEN 5
+				WHEN '좋음' THEN 4
+				WHEN '보통' THEN 3
+				WHEN '나쁨' THEN 2
+				WHEN '매우나쁨' THEN 1
+				ELSE 0
+			END DESC,
+			s.post_count DESC,
+			s.name ASC
+		LIMIT #{limit}
+	</select>
+
+	<delete id="deleteRecommendations">
+		DELETE FROM ai_spot_recommendations
+		WHERE experience = #{experience}
+			AND forecast_date = #{forecastDate}
+	</delete>
+
+	<insert id="insertRecommendations">
+		INSERT INTO ai_spot_recommendations (
+			experience,
+			forecast_date,
+			spot_id,
+			rank_no,
+			reason,
+			generated_at
+		)
+		VALUES
+		<foreach collection="recommendations" item="recommendation" separator=",">
+			(
+				#{recommendation.experience},
+				#{recommendation.forecastDate},
+				#{recommendation.spotId},
+				#{recommendation.rank},
+				#{recommendation.reason},
+				#{recommendation.generatedAt}
+			)
+		</foreach>
+	</insert>
+
+	<select id="findLatestRecommendations" resultType="badamoyeo_api.ai.recommendation.dto.AiSpotRecommendationResponse">
+		SELECT
+			r.spot_id AS spotId,
+			r.experience,
+			s.name AS spotName,
+			s.region,
+			r.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			s.post_count AS postCount,
+			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
+			CAST(mf.metrics AS CHAR) AS metrics,
+			r.rank_no AS rank,
+			r.reason,
+			r.generated_at AS generatedAt
+		FROM ai_spot_recommendations r
+		JOIN spots s ON s.id = r.spot_id
+		LEFT JOIN marine_forecasts mf
+			ON mf.spot_id = r.spot_id
+			AND mf.forecast_date = r.forecast_date
+			AND mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = r.spot_id
+					AND mf2.forecast_date = r.forecast_date
+				ORDER BY mf2.time_slot ASC, mf2.id ASC
+				LIMIT 1
+			)
+		LEFT JOIN favorite_spots fs
+			ON fs.spot_id = r.spot_id
+			AND fs.user_id = #{userId}
+		WHERE r.experience = #{experience}
+			AND r.generated_at = (
+				SELECT MAX(r2.generated_at)
+				FROM ai_spot_recommendations r2
+				WHERE r2.experience = #{experience}
+			)
+		ORDER BY r.rank_no ASC
+	</select>
+</mapper>

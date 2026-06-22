@@ -40,6 +40,15 @@ OPENAPI_MARINE_SERVICE_KEY=...
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
+AI 챗봇을 사용할 경우 아래 값도 설정합니다. 설정하지 않으면 서버는 정상 실행되고 챗봇 API만 `503 Service Unavailable`을 반환합니다.
+
+```bash
+AI_CHAT_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_CHAT_MODEL=gpt-5.4-mini
+AI_ANALYSIS_MODEL=gpt-5-mini
+```
+
 OAuth를 사용할 경우 아래 값도 설정합니다.
 
 ```bash
@@ -68,6 +77,67 @@ REFRESH_TOKEN_COOKIE_SECURE=true
 ```text
 http://localhost:8080/api
 ```
+
+## AI 챗봇
+
+로그인 후 access token을 포함해 챗봇 응답 리소스를 생성합니다.
+
+```http
+POST /api/ai/chat-completions
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+
+{
+  "message": "이번 주말에 서핑하기 좋은 조건을 알려줘"
+}
+```
+
+응답:
+
+```json
+{
+  "content": "서핑 장소를 고를 때는 파고, 풍속, 수온을 함께 확인하세요.",
+  "createdAt": "2026-06-22T12:00:00Z"
+}
+```
+
+장소 추천·비추천 질문에는 Spring AI Tool Calling으로 `spots`와 `marine_forecasts`를 먼저 조회합니다.
+AI는 DB에 저장된 장소와 가장 가까운 날짜의 예보만 근거로 답하며, 응답에 데이터 기준일을 포함하도록 설정되어 있습니다.
+
+## 메인 AI 장소 추천
+
+해양 예보 스케줄 수집이 성공하면 체험별 후보 장소를 AI가 평가해 최대 6곳을 저장합니다.
+AI 호출이나 결과 검증이 실패하면 기존 추천은 유지됩니다.
+서버 시작 시에는 동일 체험·예보일 추천이 이미 있으면 AI를 다시 호출하지 않으며,
+정기 스케줄 수집 때는 갱신된 데이터로 추천을 다시 생성합니다.
+
+기존 DB에는 먼저 아래 마이그레이션을 적용합니다.
+
+```bash
+mysql -u {user} -p {database} < docs/ai-recommendations.sql
+```
+
+최신 추천 조회:
+
+```http
+GET /api/ai/spot-recommendations?experience=surfing
+```
+
+응답의 `items`에는 카드 정보와 함께 AI가 생성한 `rank`, `reason`, `generatedAt`이 포함됩니다.
+
+## 상세페이지 AI 분석
+
+상세페이지에서 처음 요청된 장소·예보만 `gpt-5-mini`로 분석하고 DB에 저장합니다.
+같은 예보가 다시 요청되면 저장된 결과를 반환하며, 해당 예보 행의 `updated_at`이 변경된 경우에만 다시 생성합니다.
+AI 입력에는 정제된 `metrics`, 종합지수, 날씨, 물때만 사용하고 `rawData`는 제외합니다.
+
+```http
+GET /api/spots/{spotId}/ai-analysis
+GET /api/spots/{spotId}/ai-analysis?targetDate=2026-06-23
+```
+
+응답에는 `summary`, `advantages`, `disadvantages`, `recommended`,
+`recommendationReason`, `safetyNote`, `generatedAt`이 포함됩니다.
 
 ## 테스트
 

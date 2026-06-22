@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="badamoyeo_api.ai.analysis.mapper.AiSpotAnalysisMapper">
+
+	<select id="findSource" resultType="badamoyeo_api.ai.analysis.dto.AiSpotAnalysisSource">
+		SELECT
+			s.id AS spotId,
+			mf.id AS forecastId,
+			s.experience,
+			s.name AS spotName,
+			s.region,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			mf.weather,
+			mf.tide,
+			CAST(mf.metrics AS CHAR) AS metrics,
+			mf.updated_at AS forecastUpdatedAt
+		FROM spots s
+		JOIN marine_forecasts mf
+			ON mf.spot_id = s.id
+			AND mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = s.id
+				<if test="targetDate != null">
+					AND mf2.forecast_date = #{targetDate}
+				</if>
+				ORDER BY
+					<if test="targetDate == null">
+						CASE WHEN mf2.forecast_date &gt;= CURRENT_DATE THEN 0 ELSE 1 END,
+						ABS(DATEDIFF(mf2.forecast_date, CURRENT_DATE)),
+					</if>
+					mf2.forecast_date ASC,
+					mf2.time_slot ASC,
+					mf2.id ASC
+				LIMIT 1
+			)
+		WHERE s.id = #{spotId}
+			AND s.active = 1
+	</select>
+
+	<select id="findAnalysis" resultType="badamoyeo_api.ai.analysis.dto.AiSpotAnalysisRow">
+		SELECT
+			a.spot_id AS spotId,
+			a.forecast_id AS forecastId,
+			s.experience,
+			s.name AS spotName,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			a.summary,
+			CAST(a.advantages AS CHAR) AS advantagesJson,
+			CAST(a.disadvantages AS CHAR) AS disadvantagesJson,
+			a.recommended,
+			a.recommendation_reason AS recommendationReason,
+			a.safety_note AS safetyNote,
+			a.source_forecast_updated_at AS sourceForecastUpdatedAt,
+			a.generated_at AS generatedAt
+		FROM ai_spot_analyses a
+		JOIN spots s ON s.id = a.spot_id
+		JOIN marine_forecasts mf ON mf.id = a.forecast_id
+		WHERE a.forecast_id = #{forecastId}
+	</select>
+
+	<insert id="upsertAnalysis">
+		INSERT INTO ai_spot_analyses (
+			spot_id,
+			forecast_id,
+			summary,
+			advantages,
+			disadvantages,
+			recommended,
+			recommendation_reason,
+			safety_note,
+			source_forecast_updated_at,
+			generated_at
+		)
+		VALUES (
+			#{spotId},
+			#{forecastId},
+			#{summary},
+			#{advantagesJson},
+			#{disadvantagesJson},
+			#{recommended},
+			#{recommendationReason},
+			#{safetyNote},
+			#{sourceForecastUpdatedAt},
+			#{generatedAt}
+		)
+		ON DUPLICATE KEY UPDATE
+			summary = VALUES(summary),
+			advantages = VALUES(advantages),
+			disadvantages = VALUES(disadvantages),
+			recommended = VALUES(recommended),
+			recommendation_reason = VALUES(recommendation_reason),
+			safety_note = VALUES(safety_note),
+			source_forecast_updated_at = VALUES(source_forecast_updated_at),
+			generated_at = VALUES(generated_at)
+	</insert>
+</mapper>
