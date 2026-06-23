@@ -2,6 +2,8 @@ package badamoyeo_api.spot.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -11,8 +13,13 @@ import org.springframework.web.server.ResponseStatusException;
 import badamoyeo_api.common.PageResponse;
 import badamoyeo_api.dashboard.dto.MarkerResponse;
 import badamoyeo_api.spot.dto.Experience;
+import badamoyeo_api.spot.dto.ForecastTimeSlot;
 import badamoyeo_api.spot.dto.SpotCardResponse;
+import badamoyeo_api.spot.dto.SpotCardRow;
 import badamoyeo_api.spot.dto.SpotDetailResponse;
+import badamoyeo_api.spot.dto.SpotDetailRow;
+import badamoyeo_api.spot.dto.SpotForecastResponse;
+import badamoyeo_api.spot.dto.SpotForecastRow;
 import badamoyeo_api.spot.dto.SpotSearchCondition;
 import badamoyeo_api.spot.mapper.SpotMapper;
 
@@ -24,16 +31,21 @@ public class SpotService {
 		this.spotMapper = spotMapper;
 	}
 
-	public List<MarkerResponse> findMarkers(String experience, LocalDate targetDate) {
-		return spotMapper.findMarkers(Experience.from(experience).apiValue(), effectiveTargetDate(targetDate));
+	public List<MarkerResponse> findMarkers(String experience, LocalDate targetDate, String timeSlot) {
+		return spotMapper.findMarkers(
+			Experience.from(experience).apiValue(),
+			effectiveTargetDate(targetDate),
+			ForecastTimeSlot.normalize(timeSlot)
+		);
 	}
 
 	public PageResponse<SpotCardResponse> findSpots(String experience, String sort, LocalDate targetDate, String region,
 		String keyword, int page, int pageSize, Double userLat, Double userLng, Long userId) {
 		int currentPage = Math.max(page, 1);
 		int size = Math.min(Math.max(pageSize, 1), 100);
-		SpotSearchCondition condition = condition(experience, sort, effectiveTargetDate(targetDate), region, keyword, size, (currentPage - 1) * size, userLat, userLng, userId);
-		List<SpotCardResponse> items = spotMapper.findSpotCards(condition);
+		LocalDate date = effectiveTargetDate(targetDate);
+		SpotSearchCondition condition = condition(experience, sort, date, region, keyword, size, (currentPage - 1) * size, userLat, userLng, userId);
+		List<SpotCardResponse> items = attachForecasts(spotMapper.findSpotCards(condition), date);
 		long totalCount = spotMapper.countSpotCards(condition);
 		return PageResponse.of(items, currentPage, size, totalCount);
 	}
@@ -41,7 +53,11 @@ public class SpotService {
 	public List<SpotCardResponse> findTopSpots(String experience, String sort, LocalDate targetDate, int limit,
 		Double userLat, Double userLng, Long userId) {
 		int size = Math.min(Math.max(limit, 1), 100);
-		return spotMapper.findSpotCards(condition(experience, sort, effectiveTargetDate(targetDate), null, null, size, 0, userLat, userLng, userId));
+		LocalDate date = effectiveTargetDate(targetDate);
+		return attachForecasts(
+			spotMapper.findSpotCards(condition(experience, sort, date, null, null, size, 0, userLat, userLng, userId)),
+			date
+		);
 	}
 
 	public long countSpots(String experience, LocalDate targetDate) {
@@ -49,11 +65,47 @@ public class SpotService {
 	}
 
 	public SpotDetailResponse findSpotDetail(Long spotId, LocalDate targetDate, Long userId) {
-		SpotDetailResponse detail = spotMapper.findSpotDetail(spotId, effectiveTargetDate(targetDate), userId);
+		LocalDate date = effectiveTargetDate(targetDate);
+		SpotDetailRow detail = spotMapper.findSpotDetail(spotId, date, userId);
 		if (detail == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "spot not found");
 		}
-		return detail;
+		return detail.toResponse(
+			spotMapper.findSpotForecasts(List.of(spotId), date, null)
+				.stream()
+				.map(SpotForecastRow::toResponse)
+				.toList()
+		);
+	}
+
+	public List<SpotCardResponse> attachForecasts(List<SpotCardRow> rows, LocalDate targetDate) {
+		return attachForecasts(rows, targetDate, null);
+	}
+
+	public List<SpotCardResponse> attachForecasts(
+		List<SpotCardRow> rows,
+		LocalDate targetDate,
+		String timeSlot
+	) {
+		if (rows.isEmpty()) {
+			return List.of();
+		}
+		List<Long> spotIds = rows.stream().map(SpotCardRow::spotId).toList();
+		Map<Long, List<SpotForecastRow>> forecastRowsBySpot = spotMapper.findSpotForecasts(
+				spotIds,
+				targetDate,
+				ForecastTimeSlot.normalize(timeSlot)
+			)
+			.stream()
+			.collect(Collectors.groupingBy(SpotForecastRow::spotId));
+		return rows.stream()
+			.map(row -> row.toResponse(
+				forecastRowsBySpot.getOrDefault(row.spotId(), List.of())
+					.stream()
+					.map(SpotForecastRow::toResponse)
+					.toList()
+			))
+			.toList();
 	}
 
 	@Transactional

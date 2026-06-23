@@ -30,7 +30,7 @@ public class FileStorageService {
 
 	public FileStorageService(
 		@Value("${app.upload.directory:uploads}") String uploadDirectory,
-		@Value("${app.upload.public-url-prefix:/api/uploads}") String publicUrlPrefix,
+		@Value("${app.upload.public-url-prefix:/uploads}") String publicUrlPrefix,
 		@Value("${app.upload.max-file-size-bytes:5242880}") long maxFileSizeBytes
 	) {
 		this.uploadDirectory = Path.of(uploadDirectory).toAbsolutePath().normalize();

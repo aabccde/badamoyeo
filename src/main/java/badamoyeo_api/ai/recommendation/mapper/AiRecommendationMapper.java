@@ -12,7 +12,7 @@ import badamoyeo_api.ai.recommendation.dto.AiSpotRecommendationResponse;
 
 @Mapper
 public interface AiRecommendationMapper {
-	LocalDate findRecommendationForecastDate(
+	List<LocalDate> findRecommendationForecastDates(
 		@Param("experience") String experience,
 		@Param("baseDate") LocalDate baseDate
 	);
@@ -35,8 +35,9 @@ public interface AiRecommendationMapper {
 
 	void insertRecommendations(@Param("recommendations") List<AiRecommendationSaveRequest> recommendations);
 
-	List<AiSpotRecommendationResponse> findLatestRecommendations(
+	List<AiSpotRecommendationResponse> findRecommendations(
 		@Param("experience") String experience,
+		@Param("targetDate") LocalDate targetDate,
 		@Param("userId") Long userId
 	);
 }

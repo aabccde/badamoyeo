@@ -97,7 +97,7 @@
                 "logout"
               ]
             },
-            "description": "refreshToken을 폐기하고 로그아웃합니다.  \naccessToken이 만료된 상태에서도 호출할 수 있습니다.  \n로그아웃 성공 시 refreshToken Cookie를 만료시킵니다.  \n프론트는 로그아웃 성공 후 보관 중인 accessToken을 삭제해야 합니다.\n\n## Authorization\n\n인증 헤더 불필요\n\n## Cookie\n\n- refreshToken: HttpOnly Cookie\n    \n\n## Response\n\n204 No Content\n\n## Header\n\n- Set-Cookie: refreshToken=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/api/auth\n    \n\n## Error\n\n- 401 Unauthorized: refreshToken이 없거나 유효하지 않음"
+            "description": "refreshToken을 폐기하고 로그아웃합니다.  \naccessToken이 만료된 상태에서도 호출할 수 있습니다.  \n로그아웃 성공 시 refreshToken Cookie를 만료시킵니다.  \n프론트는 로그아웃 성공 후 보관 중인 accessToken을 삭제해야 합니다.\n\n## Authorization\n\n인증 헤더 불필요\n\n## Cookie\n\n- refreshToken: HttpOnly Cookie\n    \n\n## Response\n\n204 No Content\n\n## Header\n\n- Set-Cookie: refreshToken=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/auth\n    \n\n## Error\n\n- 401 Unauthorized: refreshToken이 없거나 유효하지 않음"
           },
           "response": []
         },
@@ -133,7 +133,7 @@
                 "refresh"
               ]
             },
-            "description": "HttpOnly Cookie에 저장된 refreshToken으로 새 accessToken을 재발급합니다.  \nrefreshToken이 유효하면 새로운 accessToken과 사용자 정보를 반환합니다.\n\n## Authorization\n\n인증 헤더 불필요\n\n## Cookie\n\n- refreshToken: HttpOnly Cookie\n    \n\n## Response\n\n- accessToken: 새로 발급된 JWT accessToken\n    \n- user.userId: 사용자 ID\n    \n- user.email: 이메일\n    \n- user.nickname: 닉네임\n    \n- user.profileImageUrl: 프로필 이미지 URL\n    \n\n## Header\n\n- Set-Cookie: refreshToken=...; HttpOnly; SameSite=Lax; Path=/api/auth\n    \n\n## Error\n\n- 401 Unauthorized: refreshToken이 없거나, 만료되었거나, 폐기된 경우"
+            "description": "HttpOnly Cookie에 저장된 refreshToken으로 새 accessToken을 재발급합니다.  \nrefreshToken이 유효하면 새로운 accessToken과 사용자 정보를 반환합니다.\n\n## Authorization\n\n인증 헤더 불필요\n\n## Cookie\n\n- refreshToken: HttpOnly Cookie\n    \n\n## Response\n\n- accessToken: 새로 발급된 JWT accessToken\n    \n- user.userId: 사용자 ID\n    \n- user.email: 이메일\n    \n- user.nickname: 닉네임\n    \n- user.profileImageUrl: 프로필 이미지 URL\n    \n\n## Header\n\n- Set-Cookie: refreshToken=...; HttpOnly; SameSite=Lax; Path=/auth\n    \n\n## Error\n\n- 401 Unauthorized: refreshToken이 없거나, 만료되었거나, 폐기된 경우"
           },
           "response": []
         },
@@ -202,7 +202,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/dashboard/markers?experience=seaTravel&targetDate=2025-09-04",
+              "raw": "{{baseUrl}}/dashboard/markers?experience=seaTravel&targetDate=2026-06-23&timeSlot=오전",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -217,11 +217,15 @@
                 },
                 {
                   "key": "targetDate",
-                  "value": "2025-09-04"
+                  "value": "2026-06-23"
+                },
+                {
+                  "key": "timeSlot",
+                  "value": "오전"
                 }
               ]
             },
-            "description": "선택한 체험의 전국 모든 스팟 좌표를 조회합니다.\n\n프론트 지도 화면에서 마커를 렌더링할 때 사용합니다.\n\n## Query Params\n\n- experience: 체험 종류\n    \n    - seaTravel\n        \n    - swimming\n        \n    - mudflat\n        \n    - scuba\n        \n    - fishing\n        \n    - surfing\n        \n- targetDate: 조회할 예측 날짜. 형식은 YYYY-MM-DD\n    \n\n## Response\n\n- spotId: 스팟 ID\n    \n- spotName: 스팟 이름\n    \n- lat: 위도\n    \n- lng: 경도\n    \n- totalIndex: 종합 지수\n    \n- experience: 체험 종류\n    \n\n## Error\n\n- 400 Bad Request: 지원하지 않는 experience 또는 잘못된 targetDate 형식"
+            "description": "선택한 체험·날짜·시간대의 전국 스팟 좌표를 조회합니다.\n\n프론트 지도 화면에서 마커를 렌더링할 때 사용합니다.\n\n## Query Params\n\n- experience: 체험 종류\n- targetDate: 조회할 예측 날짜. 형식은 YYYY-MM-DD\n- timeSlot: 오전, 오후, 일. 생략하면 해당 날짜의 대표 시간대를 반환\n\n요청 시간대 데이터가 없는 장소는 제외됩니다.\n\n## Response\n\n- spotId: 스팟 ID\n- spotName: 스팟 이름\n- lat: 위도\n- lng: 경도\n- timeSlot: 요청한 시간대\n- totalIndex: 종합 지수\n- experience: 체험 종류\n\n## Error\n\n- 400 Bad Request: 지원하지 않는 experience, timeSlot 또는 잘못된 targetDate 형식"
           },
           "response": []
         },
@@ -1024,7 +1028,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/users/me/favorite-spots?page=1&pageSize=10&targetDate=2025-09-04",
+              "raw": "{{baseUrl}}/users/me/favorite-spots?page=1&pageSize=10&targetDate=2026-06-23&timeSlot=오후",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1046,12 +1050,17 @@
                 },
                 {
                   "key": "targetDate",
-                  "value": "2025-09-04",
+                  "value": "2026-06-23",
+                  "type": "text"
+                },
+                {
+                  "key": "timeSlot",
+                  "value": "오후",
                   "type": "text"
                 }
               ]
             },
-            "description": "로그인한 사용자가 즐겨찾기한 스팟 목록을 조회합니다.\n\n마이페이지의 즐겨찾기 스팟 목록 화면에서 사용합니다.\n\n## Authorization\n\nBearer Token 필요\n\n## Query Params\n\n- page: 페이지 번호. 1부터 시작\n    \n- pageSize: 한 페이지에 가져올 스팟 개수\n    \n- targetDate: 조회할 예측 날짜. 형식은 YYYY-MM-DD\n    \n\ntargetDate가 없으면 서버 현재 날짜 기준 forecast/metrics를 반환합니다.\n\n## Response\n\n- items: 즐겨찾기한 스팟 목록\n    \n- items\\[\\].spotId: 스팟 ID\n    \n- items\\[\\].spotName: 스팟 이름\n    \n- items\\[\\].experience: 체험 종류\n    \n- items\\[\\].lat: 위도\n    \n- items\\[\\].lng: 경도\n    \n- items\\[\\].forecastDate: 예측 일자\n    \n- items\\[\\].totalIndex: 종합 지수\n    \n- items\\[\\].timeSlot: 시간 정보\n    \n- items\\[\\].postCount: 게시글 수\n    \n- items\\[\\].favorite: 즐겨찾기 여부\n    \n- items\\[\\].metrics: 체험별 상세 지표\n    \n- page: 현재 페이지 번호\n    \n- pageSize: 페이지 크기\n    \n- totalCount: 전체 즐겨찾기 스팟 수\n    \n- hasNext: 다음 페이지 존재 여부\n    \n\n## Error\n\n- 400 Bad Request: 잘못된 targetDate 형식\n    \n- 401 Unauthorized: 로그인하지 않았거나 accessToken이 유효하지 않음"
+            "description": "로그인한 사용자가 즐겨찾기한 스팟을 선택 날짜·시간대로 조회합니다.\n\n## Authorization\n\nBearer Token 필요\n\n## Query Params\n\n- page: 페이지 번호\n- pageSize: 페이지 크기\n- targetDate: YYYY-MM-DD. 생략하면 오늘\n- timeSlot: 오전, 오후, 일. 생략하면 전체 시간대\n\n요청 시간대 데이터가 없는 즐겨찾기 장소는 제외됩니다. `forecasts`에는 요청한 시간대 데이터만 포함됩니다.\n\n## Error\n\n- 400 Bad Request: 잘못된 targetDate 또는 지원하지 않는 timeSlot\n- 401 Unauthorized: 로그인하지 않았거나 accessToken이 유효하지 않음"
           },
           "response": []
         },

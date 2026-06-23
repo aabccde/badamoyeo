@@ -90,7 +90,7 @@ public class MarineForecastIngestionScheduler {
 			} else {
 				recommendationService.refresh(result.experience(), targetDate);
 			}
-			log.info("Refreshed AI spot recommendations. experience={}, forecastDate={}",
+			log.info("Refreshed AI spot recommendations for all forecast dates. experience={}, baseDate={}",
 				result.experience(), targetDate);
 		} catch (Exception exception) {
 			log.error("Failed to refresh AI spot recommendations. experience={}, forecastDate={}",

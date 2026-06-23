@@ -39,7 +39,7 @@ class AiRecommendationServiceTest {
 		List<AiRecommendationItem> generated = IntStream.rangeClosed(1, 6)
 			.mapToObj(rank -> new AiRecommendationItem((long) rank, rank, "추천 이유 " + rank))
 			.toList();
-		when(mapper.findRecommendationForecastDate("surfing", date)).thenReturn(date);
+		when(mapper.findRecommendationForecastDates("surfing", date)).thenReturn(List.of(date));
 		when(mapper.findCandidates("surfing", date, 20)).thenReturn(candidates);
 		when(generator.generate("surfing", candidates)).thenReturn(generated);
 		Mockito.doAnswer(invocation -> {
@@ -69,7 +69,7 @@ class AiRecommendationServiceTest {
 			new AiRecommendationItem(5L, 5, "이유"),
 			new AiRecommendationItem(6L, 6, "이유")
 		);
-		when(mapper.findRecommendationForecastDate("surfing", date)).thenReturn(date);
+		when(mapper.findRecommendationForecastDates("surfing", date)).thenReturn(List.of(date));
 		when(mapper.findCandidates("surfing", date, 20)).thenReturn(candidates);
 		when(generator.generate("surfing", candidates)).thenReturn(generated);
 
@@ -83,7 +83,7 @@ class AiRecommendationServiceTest {
 	@Test
 	void skipsAiGenerationOnStartupWhenRecommendationsAlreadyExist() {
 		LocalDate date = LocalDate.of(2026, 6, 22);
-		when(mapper.findRecommendationForecastDate("surfing", date)).thenReturn(date);
+		when(mapper.findRecommendationForecastDates("surfing", date)).thenReturn(List.of(date));
 		when(mapper.existsRecommendations("surfing", date)).thenReturn(true);
 
 		service.refreshIfAbsent("surfing", date);
@@ -92,13 +92,47 @@ class AiRecommendationServiceTest {
 		verify(generator, never()).generate(any(), any());
 	}
 
+	@Test
+	void generatesRecommendationsForEveryForecastDate() {
+		LocalDate baseDate = LocalDate.of(2026, 6, 23);
+		LocalDate nextDate = baseDate.plusDays(1);
+		List<AiRecommendationCandidate> firstCandidates = candidatesFor(baseDate);
+		List<AiRecommendationCandidate> secondCandidates = candidatesFor(nextDate);
+		List<AiRecommendationItem> generated = IntStream.rangeClosed(1, 6)
+			.mapToObj(rank -> new AiRecommendationItem((long) rank, rank, "추천 이유 " + rank))
+			.toList();
+		when(mapper.findRecommendationForecastDates("surfing", baseDate))
+			.thenReturn(List.of(baseDate, nextDate));
+		when(mapper.findCandidates("surfing", baseDate, 20)).thenReturn(firstCandidates);
+		when(mapper.findCandidates("surfing", nextDate, 20)).thenReturn(secondCandidates);
+		when(generator.generate("surfing", firstCandidates)).thenReturn(generated);
+		when(generator.generate("surfing", secondCandidates)).thenReturn(generated);
+		Mockito.doAnswer(invocation -> {
+			@SuppressWarnings("unchecked")
+			Consumer<TransactionStatus> callback = invocation.getArgument(0);
+			callback.accept(Mockito.mock(TransactionStatus.class));
+			return null;
+		}).when(transactionTemplate).executeWithoutResult(any());
+
+		service.refresh("surfing", baseDate);
+
+		verify(generator).generate("surfing", firstCandidates);
+		verify(generator).generate("surfing", secondCandidates);
+		verify(mapper).deleteRecommendations("surfing", baseDate);
+		verify(mapper).deleteRecommendations("surfing", nextDate);
+	}
+
 	private List<AiRecommendationCandidate> candidates() {
+		return candidatesFor(LocalDate.of(2026, 6, 22));
+	}
+
+	private List<AiRecommendationCandidate> candidatesFor(LocalDate forecastDate) {
 		return IntStream.rangeClosed(1, 6)
 			.mapToObj(id -> new AiRecommendationCandidate(
 				(long) id,
 				"장소 " + id,
 				"제주",
-				LocalDate.of(2026, 6, 22),
+				forecastDate,
 				"오전",
 				"좋음",
 				"맑음",

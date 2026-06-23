@@ -45,10 +45,12 @@ class AiRecommendationControllerTest {
 			1L, "surfing", "중문색달해수욕장", "제주", forecastDate, "오전", "좋음",
 			10, false, Map.of("waveHeight", 1.2), 1, "파고와 종합지수가 적합합니다.", generatedAt
 		);
-		when(recommendationService.findLatest("surfing", null))
+		when(recommendationService.findRecommendations("surfing", forecastDate, null))
 			.thenReturn(new AiSpotRecommendationsResponse("surfing", forecastDate, generatedAt, List.of(item)));
 
-		mockMvc.perform(get("/ai/spot-recommendations").param("experience", "surfing"))
+		mockMvc.perform(get("/ai/spot-recommendations")
+				.param("experience", "surfing")
+				.param("targetDate", "2026-06-22"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.experience").value("surfing"))
 			.andExpect(jsonPath("$.items[0].spotId").value(1))

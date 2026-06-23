@@ -18,8 +18,8 @@ public class DashboardService {
 		this.spotService = spotService;
 	}
 
-	public List<MarkerResponse> findMarkers(String experience, LocalDate targetDate) {
-		return spotService.findMarkers(experience, targetDate);
+	public List<MarkerResponse> findMarkers(String experience, LocalDate targetDate, String timeSlot) {
+		return spotService.findMarkers(experience, targetDate, timeSlot);
 	}
 
 	public DashboardResponse findDashboard(String experience, int limit, String sort, LocalDate targetDate,

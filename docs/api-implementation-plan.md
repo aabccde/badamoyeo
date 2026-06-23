@@ -14,9 +14,7 @@
 
 The server is configured with:
 
-```properties
-server.servlet.context-path=/api
-```
+The server exposes endpoints from the root path without a global context path.
 
 All endpoint paths below are served under `/api`.
 
@@ -31,13 +29,13 @@ Authorization: Bearer {accessToken}
 `refreshToken` is not exposed in JSON responses. It is stored in an `HttpOnly` cookie:
 
 ```http
-Set-Cookie: refreshToken=...; HttpOnly; SameSite=Lax; Path=/api/auth
+Set-Cookie: refreshToken=...; HttpOnly; SameSite=Lax; Path=/auth
 ```
 
 Frontend requests that rely on the refresh token cookie must include credentials:
 
 ```js
-fetch("/api/auth/refresh", {
+fetch("/auth/refresh", {
   method: "POST",
   credentials: "include"
 });
@@ -46,27 +44,27 @@ fetch("/api/auth/refresh", {
 For axios:
 
 ```js
-axios.post("/api/auth/refresh", {}, { withCredentials: true });
+axios.post("/auth/refresh", {}, { withCredentials: true });
 ```
 
 ## Auth endpoints
 
-- `POST /api/auth/signup`
+- `POST /auth/signup`
   - Response body: `accessToken`, `user`
   - Response cookie: `refreshToken`
-- `POST /api/auth/login`
+- `POST /auth/login`
   - Response body: `accessToken`, `user`
   - Response cookie: `refreshToken`
-- `POST /api/auth/refresh`
+- `POST /auth/refresh`
   - Reads `refreshToken` from cookie, with body fallback for compatibility
   - Response body: `accessToken`, `user`
-- `POST /api/auth/logout`
+- `POST /auth/logout`
   - Reads `refreshToken` from cookie, with body fallback for compatibility
   - Revokes the refresh token and expires the cookie
   - Does not require a valid access token
-- `GET /api/auth/oauth/{provider}`
+- `GET /auth/oauth/{provider}`
   - Supported providers: `google`, `kakao`, `naver`
-- `GET /api/auth/oauth/{provider}/callback`
+- `GET /auth/oauth/{provider}/callback`
   - Issues service tokens
   - Redirects to the configured frontend OAuth success URL
   - Sends `refreshToken` through an `HttpOnly` cookie, not a URL query parameter
@@ -87,7 +85,7 @@ REFRESH_TOKEN_COOKIE_SECURE=true
 Admin ingestion endpoints are protected with `ROLE_ADMIN`:
 
 ```http
-POST /api/admin/ingest/marine-forecasts
+POST /admin/ingest/marine-forecasts
 ```
 
 Scheduled ingestion and startup ingestion call the ingestion service internally and do not depend on the admin HTTP endpoint.
@@ -96,15 +94,15 @@ Scheduled ingestion and startup ingestion call the ingestion service internally 
 
 Implemented dashboard APIs:
 
-- `GET /api/dashboard/markers`
-- `GET /api/dashboard`
+- `GET /dashboard/markers`
+- `GET /dashboard`
 
 Implemented spot APIs:
 
-- `GET /api/spots`
-- `GET /api/spots/{spotId}`
-- `POST /api/spots/{spotId}/favorite`
-- `DELETE /api/spots/{spotId}/favorite`
+- `GET /spots`
+- `GET /spots/{spotId}`
+- `POST /spots/{spotId}/favorite`
+- `DELETE /spots/{spotId}/favorite`
 
 Experience values:
 
@@ -125,14 +123,14 @@ Sort values:
 
 Implemented post APIs:
 
-- `GET /api/spots/{spotId}/posts`
-- `POST /api/spots/{spotId}/posts`
-- `GET /api/posts/{postId}`
-- `PATCH /api/posts/{postId}`
-- `DELETE /api/posts/{postId}`
-- `POST /api/posts/images`
-- `POST /api/posts/{postId}/likes`
-- `DELETE /api/posts/{postId}/likes`
+- `GET /spots/{spotId}/posts`
+- `POST /spots/{spotId}/posts`
+- `GET /posts/{postId}`
+- `PATCH /posts/{postId}`
+- `DELETE /posts/{postId}`
+- `POST /posts/images`
+- `POST /posts/{postId}/likes`
+- `DELETE /posts/{postId}/likes`
 
 Post image policy:
 
@@ -144,10 +142,10 @@ Post image policy:
 
 Implemented comment APIs:
 
-- `GET /api/posts/{postId}/comments`
-- `POST /api/posts/{postId}/comments`
-- `PATCH /api/comments/{commentId}`
-- `DELETE /api/comments/{commentId}`
+- `GET /posts/{postId}/comments`
+- `POST /posts/{postId}/comments`
+- `PATCH /comments/{commentId}`
+- `DELETE /comments/{commentId}`
 
 Comment deletion is soft-delete based. Deleted comments remain in the tree with `status = DELETED` and placeholder content, so child replies can remain visible.
 
@@ -155,15 +153,15 @@ Comment deletion is soft-delete based. Deleted comments remain in the tree with 
 
 Implemented user APIs:
 
-- `GET /api/users/me`
-- `PATCH /api/users/me`
-- `POST /api/users/me/image`
-- `PATCH /api/users/me/password`
-- `GET /api/users/me/posts`
-- `GET /api/users/me/favorite-spots`
-- `DELETE /api/users/me`
+- `GET /users/me`
+- `PATCH /users/me`
+- `POST /users/me/image`
+- `PATCH /users/me/password`
+- `GET /users/me/posts`
+- `GET /users/me/favorite-spots`
+- `DELETE /users/me`
 
-`GET /api/users/me/favorite-spots` supports:
+`GET /users/me/favorite-spots` supports:
 
 - `page`
 - `pageSize`

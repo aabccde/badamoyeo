@@ -50,9 +50,10 @@ public class UserController {
 		@AuthenticationPrincipal AuthUser authUser,
 		@RequestParam(defaultValue = "1") int page,
 		@RequestParam(defaultValue = "20") int pageSize,
-		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate,
+		@RequestParam(required = false) String timeSlot
 	) {
-		return userService.findMyFavoriteSpots(authUser.userId(), page, pageSize, targetDate);
+		return userService.findMyFavoriteSpots(authUser.userId(), page, pageSize, targetDate, timeSlot);
 	}
 
 	@PatchMapping("/users/me")

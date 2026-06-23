@@ -14,6 +14,9 @@ import badamoyeo_api.post.dto.PostListResponse;
 import badamoyeo_api.post.dto.PostListRow;
 import badamoyeo_api.post.dto.PostWriterResponse;
 import badamoyeo_api.spot.dto.SpotCardResponse;
+import badamoyeo_api.spot.dto.SpotCardRow;
+import badamoyeo_api.spot.dto.ForecastTimeSlot;
+import badamoyeo_api.spot.service.SpotService;
 import badamoyeo_api.user.dto.UserDeleteRequest;
 import badamoyeo_api.user.dto.UserPasswordChangeRequest;
 import badamoyeo_api.user.dto.UserProfileResponse;
@@ -25,10 +28,12 @@ import badamoyeo_api.user.mapper.UserMapper;
 public class UserService {
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
+	private final SpotService spotService;
 
-	public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder) {
+	public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder, SpotService spotService) {
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
+		this.spotService = spotService;
 	}
 
 	public UserProfileResponse findMe(Long userId) {
@@ -52,12 +57,27 @@ public class UserService {
 		return PageResponse.of(items, currentPage, size, totalCount);
 	}
 
-	public PageResponse<SpotCardResponse> findMyFavoriteSpots(Long userId, int page, int pageSize, LocalDate targetDate) {
+	public PageResponse<SpotCardResponse> findMyFavoriteSpots(
+		Long userId,
+		int page,
+		int pageSize,
+		LocalDate targetDate,
+		String timeSlot
+	) {
 		requireUser(userId);
 		int currentPage = Math.max(page, 1);
 		int size = Math.min(Math.max(pageSize, 1), 100);
-		List<SpotCardResponse> items = userMapper.findMyFavoriteSpots(userId, effectiveTargetDate(targetDate), size, (currentPage - 1) * size);
-		long totalCount = userMapper.countMyFavoriteSpots(userId);
+		LocalDate date = effectiveTargetDate(targetDate);
+		String normalizedTimeSlot = ForecastTimeSlot.normalize(timeSlot);
+		List<SpotCardRow> rows = userMapper.findMyFavoriteSpots(
+			userId,
+			date,
+			normalizedTimeSlot,
+			size,
+			(currentPage - 1) * size
+		);
+		List<SpotCardResponse> items = spotService.attachForecasts(rows, date, normalizedTimeSlot);
+		long totalCount = userMapper.countMyFavoriteSpots(userId, date, normalizedTimeSlot);
 		return PageResponse.of(items, currentPage, size, totalCount);
 	}
 

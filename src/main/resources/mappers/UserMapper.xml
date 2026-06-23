@@ -105,7 +105,7 @@
 			AND user_id = #{userId}
 	</select>
 
-	<select id="findMyFavoriteSpots" resultType="badamoyeo_api.spot.dto.SpotCardResponse">
+	<select id="findMyFavoriteSpots" resultType="badamoyeo_api.spot.dto.SpotCardRow">
 		SELECT
 			s.id AS spotId,
 			s.experience,
@@ -129,11 +129,17 @@
 				FROM marine_forecasts mf2
 				WHERE mf2.spot_id = s.id
 					AND mf2.forecast_date = #{targetDate}
+				<if test="timeSlot != null">
+					AND mf2.time_slot = #{timeSlot}
+				</if>
 				ORDER BY mf2.time_slot ASC, mf2.id ASC
 				LIMIT 1
 			)
 		WHERE fs.user_id = #{userId}
 			AND s.active = 1
+		<if test="timeSlot != null">
+			AND mf.id IS NOT NULL
+		</if>
 		ORDER BY fs.created_at DESC, fs.id DESC
 		LIMIT #{limit} OFFSET #{offset}
 	</select>
@@ -144,5 +150,14 @@
 		JOIN spots s ON s.id = fs.spot_id
 		WHERE fs.user_id = #{userId}
 			AND s.active = 1
+		<if test="timeSlot != null">
+			AND EXISTS (
+				SELECT 1
+				FROM marine_forecasts mf
+				WHERE mf.spot_id = s.id
+					AND mf.forecast_date = #{targetDate}
+					AND mf.time_slot = #{timeSlot}
+			)
+		</if>
 	</select>
 </mapper>

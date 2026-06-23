@@ -25,16 +25,38 @@
 			s.name AS spotName,
 			s.lat,
 			s.lng,
+			mf.time_slot AS timeSlot,
 			mf.total_index AS totalIndex,
 			s.experience
 		FROM spots s
-		<include refid="latestForecastJoin" />
+		JOIN marine_forecasts mf
+			ON mf.spot_id = s.id
+			AND mf.forecast_date = #{targetDate}
+			AND mf.id = (
+				SELECT mf2.id
+				FROM marine_forecasts mf2
+				WHERE mf2.spot_id = s.id
+					AND mf2.forecast_date = #{targetDate}
+				<if test="timeSlot != null">
+					AND mf2.time_slot = #{timeSlot}
+				</if>
+				ORDER BY
+					CASE mf2.time_slot
+						WHEN '오전' THEN 1
+						WHEN '오후' THEN 2
+						WHEN '일' THEN 3
+						ELSE 4
+					END,
+					mf2.variant_key ASC,
+					mf2.id ASC
+				LIMIT 1
+			)
 		WHERE s.active = 1
 			AND s.experience = #{experience}
 		ORDER BY s.name ASC
 	</select>
 
-	<select id="findSpotCards" resultType="badamoyeo_api.spot.dto.SpotCardResponse">
+	<select id="findSpotCards" resultType="badamoyeo_api.spot.dto.SpotCardRow">
 		SELECT
 			s.id AS spotId,
 			s.experience,
@@ -97,7 +119,7 @@
 		</if>
 	</select>
 
-	<select id="findSpotDetail" resultType="badamoyeo_api.spot.dto.SpotDetailResponse">
+	<select id="findSpotDetail" resultType="badamoyeo_api.spot.dto.SpotDetailRow">
 		SELECT
 			s.id AS spotId,
 			s.experience,
@@ -111,8 +133,7 @@
 			mf.weather,
 			mf.tide,
 			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
-			CAST(mf.metrics AS CHAR) AS metrics,
-			CAST(mf.raw_data AS CHAR) AS rawData
+			CAST(mf.metrics AS CHAR) AS metrics
 		FROM spots s
 		<include refid="latestForecastJoin" />
 		LEFT JOIN favorite_spots fs
@@ -120,6 +141,38 @@
 			AND fs.user_id = #{userId}
 		WHERE s.active = 1
 			AND s.id = #{spotId}
+	</select>
+
+	<select id="findSpotForecasts" resultType="badamoyeo_api.spot.dto.SpotForecastRow">
+		SELECT
+			mf.spot_id AS spotId,
+			mf.id AS forecastId,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.variant_key AS variantKey,
+			mf.total_index AS totalIndex,
+			mf.weather,
+			mf.tide,
+			CAST(mf.metrics AS CHAR) AS metrics
+		FROM marine_forecasts mf
+		WHERE mf.spot_id IN
+		<foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+			#{spotId}
+		</foreach>
+			AND mf.forecast_date = #{targetDate}
+		<if test="timeSlot != null">
+			AND mf.time_slot = #{timeSlot}
+		</if>
+		ORDER BY
+			mf.spot_id ASC,
+			CASE mf.time_slot
+				WHEN '오전' THEN 1
+				WHEN '오후' THEN 2
+				WHEN '일' THEN 3
+				ELSE 4
+			END,
+			mf.variant_key ASC,
+			mf.id ASC
 	</select>
 
 	<select id="existsActiveSpot" resultType="boolean">

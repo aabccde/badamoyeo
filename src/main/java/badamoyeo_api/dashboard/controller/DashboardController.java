@@ -25,9 +25,10 @@ public class DashboardController {
 	@GetMapping("/dashboard/markers")
 	public List<MarkerResponse> markers(
 		@RequestParam String experience,
-		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate
+		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate,
+		@RequestParam(required = false) String timeSlot
 	) {
-		return dashboardService.findMarkers(experience, targetDate);
+		return dashboardService.findMarkers(experience, targetDate, timeSlot);
 	}
 
 	@GetMapping("/dashboard")

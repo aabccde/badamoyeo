@@ -42,27 +42,30 @@ public class AiRecommendationService {
 	}
 
 	public void refresh(String experience, LocalDate forecastDate) {
-		refresh(experience, forecastDate, false);
+		refreshAll(experience, forecastDate, false);
 	}
 
 	public void refreshIfAbsent(String experience, LocalDate forecastDate) {
-		refresh(experience, forecastDate, true);
+		refreshAll(experience, forecastDate, true);
 	}
 
-	private void refresh(String experience, LocalDate forecastDate, boolean onlyIfAbsent) {
+	private void refreshAll(String experience, LocalDate baseDate, boolean onlyIfAbsent) {
 		String normalizedExperience = Experience.from(experience).apiValue();
-		LocalDate recommendationDate = recommendationMapper.findRecommendationForecastDate(
+		List<LocalDate> recommendationDates = recommendationMapper.findRecommendationForecastDates(
 			normalizedExperience,
-			forecastDate
+			baseDate
 		);
-		if (recommendationDate == null) {
-			return;
+		for (LocalDate recommendationDate : recommendationDates) {
+			refreshDate(normalizedExperience, recommendationDate, onlyIfAbsent);
 		}
-		if (onlyIfAbsent && recommendationMapper.existsRecommendations(normalizedExperience, recommendationDate)) {
+	}
+
+	private void refreshDate(String experience, LocalDate recommendationDate, boolean onlyIfAbsent) {
+		if (onlyIfAbsent && recommendationMapper.existsRecommendations(experience, recommendationDate)) {
 			return;
 		}
 		List<AiRecommendationCandidate> candidates = recommendationMapper.findCandidates(
-			normalizedExperience,
+			experience,
 			recommendationDate,
 			CANDIDATE_LIMIT
 		);
@@ -70,24 +73,24 @@ public class AiRecommendationService {
 			return;
 		}
 
-		List<AiRecommendationItem> generated = recommendationGenerator.generate(normalizedExperience, candidates);
+		List<AiRecommendationItem> generated = recommendationGenerator.generate(experience, candidates);
 		List<AiRecommendationSaveRequest> recommendations = validateAndConvert(
-			normalizedExperience,
+			experience,
 			recommendationDate,
 			candidates,
 			generated
 		);
 
 		transactionTemplate.executeWithoutResult(status -> {
-			recommendationMapper.deleteRecommendations(normalizedExperience, recommendationDate);
+			recommendationMapper.deleteRecommendations(experience, recommendationDate);
 			recommendationMapper.insertRecommendations(recommendations);
 		});
 	}
 
-	public AiSpotRecommendationsResponse findLatest(String experience, Long userId) {
+	public AiSpotRecommendationsResponse findRecommendations(String experience, LocalDate targetDate, Long userId) {
 		String normalizedExperience = Experience.from(experience).apiValue();
 		List<AiSpotRecommendationResponse> items =
-			recommendationMapper.findLatestRecommendations(normalizedExperience, userId);
+			recommendationMapper.findRecommendations(normalizedExperience, targetDate, userId);
 		if (items.isEmpty()) {
 			return new AiSpotRecommendationsResponse(normalizedExperience, null, null, List.of());
 		}

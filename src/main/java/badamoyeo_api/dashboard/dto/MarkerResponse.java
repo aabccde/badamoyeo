@@ -7,6 +7,7 @@ public record MarkerResponse(
 	String spotName,
 	BigDecimal lat,
 	BigDecimal lng,
+	String timeSlot,
 	String totalIndex,
 	String experience
 ) {

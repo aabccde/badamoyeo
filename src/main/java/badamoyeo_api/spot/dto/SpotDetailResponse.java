@@ -2,7 +2,7 @@ package badamoyeo_api.spot.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Map;
+import java.util.List;
 
 public record SpotDetailResponse(
 	Long spotId,
@@ -12,12 +12,7 @@ public record SpotDetailResponse(
 	BigDecimal lng,
 	String region,
 	LocalDate forecastDate,
-	String timeSlot,
-	String totalIndex,
-	String weather,
-	String tide,
 	Boolean favorite,
-	Map<String, Object> metrics,
-	Map<String, Object> rawData
+	List<SpotForecastResponse> forecasts
 ) {
 }

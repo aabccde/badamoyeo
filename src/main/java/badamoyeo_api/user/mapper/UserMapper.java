@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import badamoyeo_api.post.dto.PostListRow;
-import badamoyeo_api.spot.dto.SpotCardResponse;
+import badamoyeo_api.spot.dto.SpotCardRow;
 import badamoyeo_api.user.dto.UserSecurityInfo;
 import badamoyeo_api.user.dto.UserProfileResponse;
 import badamoyeo_api.user.dto.UserUpdateRequest;
@@ -32,8 +32,12 @@ public interface UserMapper {
 
 	long countMyPosts(@Param("userId") Long userId);
 
-	List<SpotCardResponse> findMyFavoriteSpots(@Param("userId") Long userId, @Param("targetDate") LocalDate targetDate,
-		@Param("limit") int limit, @Param("offset") int offset);
+	List<SpotCardRow> findMyFavoriteSpots(@Param("userId") Long userId, @Param("targetDate") LocalDate targetDate,
+		@Param("timeSlot") String timeSlot, @Param("limit") int limit, @Param("offset") int offset);
 
-	long countMyFavoriteSpots(@Param("userId") Long userId);
+	long countMyFavoriteSpots(
+		@Param("userId") Long userId,
+		@Param("targetDate") LocalDate targetDate,
+		@Param("timeSlot") String timeSlot
+	);
 }

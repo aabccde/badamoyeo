@@ -7,19 +7,30 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import badamoyeo_api.dashboard.dto.MarkerResponse;
-import badamoyeo_api.spot.dto.SpotCardResponse;
-import badamoyeo_api.spot.dto.SpotDetailResponse;
+import badamoyeo_api.spot.dto.SpotCardRow;
+import badamoyeo_api.spot.dto.SpotDetailRow;
+import badamoyeo_api.spot.dto.SpotForecastRow;
 import badamoyeo_api.spot.dto.SpotSearchCondition;
 
 @Mapper
 public interface SpotMapper {
-	List<MarkerResponse> findMarkers(@Param("experience") String experience, @Param("targetDate") LocalDate targetDate);
+	List<MarkerResponse> findMarkers(
+		@Param("experience") String experience,
+		@Param("targetDate") LocalDate targetDate,
+		@Param("timeSlot") String timeSlot
+	);
 
-	List<SpotCardResponse> findSpotCards(SpotSearchCondition condition);
+	List<SpotCardRow> findSpotCards(SpotSearchCondition condition);
 
 	long countSpotCards(SpotSearchCondition condition);
 
-	SpotDetailResponse findSpotDetail(@Param("spotId") Long spotId, @Param("targetDate") LocalDate targetDate, @Param("userId") Long userId);
+	SpotDetailRow findSpotDetail(@Param("spotId") Long spotId, @Param("targetDate") LocalDate targetDate, @Param("userId") Long userId);
+
+	List<SpotForecastRow> findSpotForecasts(
+		@Param("spotIds") List<Long> spotIds,
+		@Param("targetDate") LocalDate targetDate,
+		@Param("timeSlot") String timeSlot
+	);
 
 	boolean existsActiveSpot(@Param("spotId") Long spotId);
 
