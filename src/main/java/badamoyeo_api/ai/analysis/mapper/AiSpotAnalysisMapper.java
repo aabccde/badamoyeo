@@ -16,6 +16,8 @@ public interface AiSpotAnalysisMapper {
 		@Param("targetDate") LocalDate targetDate
 	);
 
+	AiSpotAnalysisSource findSourceByForecastId(@Param("forecastId") Long forecastId);
+
 	AiSpotAnalysisRow findAnalysis(@Param("forecastId") Long forecastId);
 
 	void upsertAnalysis(AiSpotAnalysisSaveRequest request);

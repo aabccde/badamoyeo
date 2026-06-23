@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import badamoyeo_api.ai.analysis.dto.AiSpotAnalysisResponse;
+import badamoyeo_api.ai.analysis.service.AiSpotAnalysisService;
 import badamoyeo_api.common.PageResponse;
 import badamoyeo_api.dashboard.dto.MarkerResponse;
 import badamoyeo_api.spot.dto.Experience;
@@ -19,6 +21,7 @@ import badamoyeo_api.spot.dto.SpotCardRow;
 import badamoyeo_api.spot.dto.SpotDetailResponse;
 import badamoyeo_api.spot.dto.SpotDetailRow;
 import badamoyeo_api.spot.dto.SpotForecastResponse;
+import badamoyeo_api.spot.dto.SpotForecastAiAnalysisResponse;
 import badamoyeo_api.spot.dto.SpotForecastRow;
 import badamoyeo_api.spot.dto.SpotSearchCondition;
 import badamoyeo_api.spot.mapper.SpotMapper;
@@ -26,9 +29,11 @@ import badamoyeo_api.spot.mapper.SpotMapper;
 @Service
 public class SpotService {
 	private final SpotMapper spotMapper;
+	private final AiSpotAnalysisService analysisService;
 
-	public SpotService(SpotMapper spotMapper) {
+	public SpotService(SpotMapper spotMapper, AiSpotAnalysisService analysisService) {
 		this.spotMapper = spotMapper;
+		this.analysisService = analysisService;
 	}
 
 	public List<MarkerResponse> findMarkers(String experience, LocalDate targetDate, String timeSlot) {
@@ -70,12 +75,11 @@ public class SpotService {
 		if (detail == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "spot not found");
 		}
-		return detail.toResponse(
-			spotMapper.findSpotForecasts(List.of(spotId), date, null)
-				.stream()
-				.map(SpotForecastRow::toResponse)
-				.toList()
-		);
+		List<SpotForecastResponse> forecasts = spotMapper.findSpotForecasts(List.of(spotId), date, null)
+			.parallelStream()
+			.map(row -> row.toResponse(toSpotAnalysis(analysisService.findOrCreateByForecastId(row.forecastId()))))
+			.toList();
+		return detail.toResponse(forecasts);
 	}
 
 	public List<SpotCardResponse> attachForecasts(List<SpotCardRow> rows, LocalDate targetDate) {
@@ -149,7 +153,7 @@ public class SpotService {
 		if (sort == null || sort.isBlank()) {
 			return "index";
 		}
-		if (!List.of("index", "community", "nearby").contains(sort)) {
+		if (!List.of("index", "community", "nearby", "ai").contains(sort)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unsupported sort: " + sort);
 		}
 		return sort;
@@ -157,6 +161,13 @@ public class SpotService {
 
 	private LocalDate effectiveTargetDate(LocalDate targetDate) {
 		return targetDate == null ? LocalDate.now() : targetDate;
+	}
+
+	private SpotForecastAiAnalysisResponse toSpotAnalysis(AiSpotAnalysisResponse analysis) {
+		return new SpotForecastAiAnalysisResponse(
+			analysis.recommended(),
+			analysis.recommendationReason()
+		);
 	}
 
 	private void requireUser(Long userId) {

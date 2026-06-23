@@ -8,6 +8,7 @@ public record SpotForecastResponse(
 	String totalIndex,
 	String weather,
 	String tide,
-	Map<String, Object> metrics
+	Map<String, Object> metrics,
+	SpotForecastAiAnalysisResponse aiAnalysis
 ) {
 }

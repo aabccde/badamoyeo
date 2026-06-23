@@ -16,11 +16,12 @@ public record SpotCardRow(
 	String totalIndex,
 	Integer postCount,
 	Boolean favorite,
+	String aiReason,
 	Map<String, Object> metrics
 ) {
 	public SpotCardResponse toResponse(java.util.List<SpotForecastResponse> forecasts) {
 		return new SpotCardResponse(
-			spotId, experience, spotName, lat, lng, region, forecastDate, postCount, favorite, forecasts
+			spotId, experience, spotName, lat, lng, region, forecastDate, postCount, favorite, aiReason, forecasts
 		);
 	}
 }

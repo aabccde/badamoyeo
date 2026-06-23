@@ -22,15 +22,23 @@
 				SELECT mf2.id
 				FROM marine_forecasts mf2
 				WHERE mf2.spot_id = s.id
+				<if test="targetDate != null">
+					AND mf2.forecast_date = #{targetDate}
+				</if>
 				ORDER BY
+				<if test="targetDate == null">
 					CASE WHEN mf2.forecast_date &gt;= CURRENT_DATE THEN 0 ELSE 1 END,
 					ABS(DATEDIFF(mf2.forecast_date, CURRENT_DATE)),
+				</if>
 					mf2.forecast_date ASC,
 					mf2.time_slot ASC,
 					mf2.id ASC
 				LIMIT 1
 			)
 		WHERE s.active = 1
+		<if test="targetDate != null">
+			AND mf.id IS NOT NULL
+		</if>
 		<if test="experience != null and experience != ''">
 			AND s.experience = #{experience}
 		</if>

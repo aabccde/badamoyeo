@@ -11,12 +11,8 @@ public record AiSpotAnalysisRow(
 	LocalDate forecastDate,
 	String timeSlot,
 	String totalIndex,
-	String summary,
-	String advantagesJson,
-	String disadvantagesJson,
 	Boolean recommended,
 	String recommendationReason,
-	String safetyNote,
 	LocalDateTime sourceForecastUpdatedAt,
 	LocalDateTime generatedAt
 ) {

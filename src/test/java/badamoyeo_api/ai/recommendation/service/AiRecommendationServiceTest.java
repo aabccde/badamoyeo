@@ -9,9 +9,10 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
+
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -133,12 +134,11 @@ class AiRecommendationServiceTest {
 				"장소 " + id,
 				"제주",
 				forecastDate,
-				"오전",
-				"좋음",
-				"맑음",
-				null,
 				id,
-				Map.of("waveHeight", 0.8)
+				JsonNodeFactory.instance.arrayNode()
+					.add(JsonNodeFactory.instance.objectNode()
+						.put("timeSlot", "오전")
+						.put("totalIndex", "좋음"))
 			))
 			.toList();
 	}

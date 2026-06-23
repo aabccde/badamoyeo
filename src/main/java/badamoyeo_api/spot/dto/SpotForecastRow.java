@@ -16,7 +16,13 @@ public record SpotForecastRow(
 ) {
 	public SpotForecastResponse toResponse() {
 		return new SpotForecastResponse(
-			forecastId, timeSlot, totalIndex, weather, tide, metrics
+			forecastId, timeSlot, totalIndex, weather, tide, metrics, null
+		);
+	}
+
+	public SpotForecastResponse toResponse(SpotForecastAiAnalysisResponse aiAnalysis) {
+		return new SpotForecastResponse(
+			forecastId, timeSlot, totalIndex, weather, tide, metrics, aiAnalysis
 		);
 	}
 }

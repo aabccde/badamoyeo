@@ -73,7 +73,20 @@ public class AiRecommendationService {
 			return;
 		}
 
-		List<AiRecommendationItem> generated = recommendationGenerator.generate(experience, candidates);
+		List<AiRecommendationItem> generated;
+		try {
+			generated = recommendationGenerator.generate(experience, candidates);
+		} catch (ResponseStatusException exception) {
+			throw new ResponseStatusException(
+				exception.getStatusCode(),
+				"AI recommendation failed for experience=%s, forecastDate=%s: %s".formatted(
+					experience,
+					recommendationDate,
+					exception.getReason()
+				),
+				exception
+			);
+		}
 		List<AiRecommendationSaveRequest> recommendations = validateAndConvert(
 			experience,
 			recommendationDate,

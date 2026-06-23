@@ -69,14 +69,22 @@
 			mf.total_index AS totalIndex,
 			s.post_count AS postCount,
 			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
+			CASE WHEN #{sort} = 'ai' THEN ar.reason ELSE NULL END AS aiReason,
 			CAST(mf.metrics AS CHAR) AS metrics
 		FROM spots s
 		<include refid="latestForecastJoin" />
+		LEFT JOIN ai_spot_recommendations ar
+			ON ar.spot_id = s.id
+			AND ar.experience = s.experience
+			AND ar.forecast_date = #{targetDate}
 		LEFT JOIN favorite_spots fs
 			ON fs.spot_id = s.id
 			AND fs.user_id = #{userId}
 		WHERE s.active = 1
 			AND s.experience = #{experience}
+		<if test="sort == 'ai'">
+			AND ar.id IS NOT NULL
+		</if>
 		<if test="region != null and region != ''">
 			AND s.region = #{region}
 		</if>
@@ -84,6 +92,9 @@
 			AND s.name LIKE CONCAT('%', #{keyword}, '%')
 		</if>
 		<choose>
+			<when test="sort == 'ai'">
+				ORDER BY ar.rank_no ASC
+			</when>
 			<when test="sort == 'community'">
 				ORDER BY s.post_count DESC, s.name ASC
 			</when>

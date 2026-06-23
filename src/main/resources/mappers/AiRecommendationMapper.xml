@@ -26,35 +26,40 @@
 			s.name AS spotName,
 			s.region,
 			mf.forecast_date AS forecastDate,
-			mf.time_slot AS timeSlot,
-			mf.total_index AS totalIndex,
-			mf.weather,
-			mf.tide,
 			s.post_count AS postCount,
-			CAST(mf.metrics AS CHAR) AS metrics
+			JSON_ARRAYAGG(
+				JSON_OBJECT(
+					'forecastId', mf.id,
+					'timeSlot', mf.time_slot,
+					'totalIndex', mf.total_index,
+					'weather', mf.weather,
+					'tide', mf.tide,
+					'metrics', mf.metrics
+				)
+			) AS forecasts
 		FROM spots s
 		JOIN marine_forecasts mf
 			ON mf.spot_id = s.id
 			AND mf.forecast_date = #{forecastDate}
-			AND mf.id = (
-				SELECT mf2.id
-				FROM marine_forecasts mf2
-				WHERE mf2.spot_id = s.id
-					AND mf2.forecast_date = #{forecastDate}
-				ORDER BY mf2.time_slot ASC, mf2.id ASC
-				LIMIT 1
-			)
 		WHERE s.active = 1
 			AND s.experience = #{experience}
+		GROUP BY
+			s.id,
+			s.name,
+			s.region,
+			mf.forecast_date,
+			s.post_count
 		ORDER BY
-			CASE mf.total_index
-				WHEN '매우좋음' THEN 5
-				WHEN '좋음' THEN 4
-				WHEN '보통' THEN 3
-				WHEN '나쁨' THEN 2
-				WHEN '매우나쁨' THEN 1
-				ELSE 0
-			END DESC,
+			AVG(
+				CASE mf.total_index
+					WHEN '매우좋음' THEN 5
+					WHEN '좋음' THEN 4
+					WHEN '보통' THEN 3
+					WHEN '나쁨' THEN 2
+					WHEN '매우나쁨' THEN 1
+					ELSE 0
+				END
+			) DESC,
 			s.post_count DESC,
 			s.name ASC
 		LIMIT #{limit}
@@ -100,7 +105,7 @@
 			s.post_count AS postCount,
 			CASE WHEN fs.id IS NULL THEN FALSE ELSE TRUE END AS favorite,
 			CAST(mf.metrics AS CHAR) AS metrics,
-			r.rank_no AS rank,
+			r.rank_no AS `rank`,
 			r.reason,
 			r.generated_at AS generatedAt
 		FROM ai_spot_recommendations r

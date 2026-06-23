@@ -65,7 +65,7 @@ public class MarineForecastIngestionScheduler {
 			log.info("Start marine forecast ingestion. trigger={}", trigger);
 			LocalDate targetDate = LocalDate.now();
 			for (IngestionResult result : ingestionService.ingestAll(targetDate)) {
-				refreshRecommendations(result, targetDate, "startup".equals(trigger));
+				refreshRecommendations(result, targetDate);
 			}
 			log.info("Finish marine forecast ingestion. trigger={}", trigger);
 		} catch (ResponseStatusException exception) {
@@ -80,16 +80,12 @@ public class MarineForecastIngestionScheduler {
 		}
 	}
 
-	private void refreshRecommendations(IngestionResult result, LocalDate targetDate, boolean onlyIfAbsent) {
+	private void refreshRecommendations(IngestionResult result, LocalDate targetDate) {
 		if (result.savedCount() <= 0) {
 			return;
 		}
 		try {
-			if (onlyIfAbsent) {
-				recommendationService.refreshIfAbsent(result.experience(), targetDate);
-			} else {
-				recommendationService.refresh(result.experience(), targetDate);
-			}
+			recommendationService.refreshIfAbsent(result.experience(), targetDate);
 			log.info("Refreshed AI spot recommendations for all forecast dates. experience={}, baseDate={}",
 				result.experience(), targetDate);
 		} catch (Exception exception) {

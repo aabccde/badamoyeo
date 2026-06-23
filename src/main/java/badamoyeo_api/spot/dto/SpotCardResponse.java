@@ -14,6 +14,7 @@ public record SpotCardResponse(
 	LocalDate forecastDate,
 	Integer postCount,
 	Boolean favorite,
+	String aiReason,
 	List<SpotForecastResponse> forecasts
 ) {
 }
