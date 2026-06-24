@@ -496,6 +496,39 @@
       "name": "게시글",
       "item": [
         {
+          "name": "커뮤니티 게시글 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts?sort=popular&page=1&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "popular",
+                  "description": "popular(인기글), latest(최신글)"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "전체 스팟에 작성된 커뮤니티 게시글 목록을 조회합니다.\n\n커뮤니티 메인 화면의 인기글/최신글 피드에서 사용합니다.\n\n## Authorization\n\n필수 아님\n\n로그인 상태에서 Authorization Bearer Token을 전달하면 liked 값이 현재 사용자 기준으로 반환됩니다.  \n비회원이면 liked는 false로 반환됩니다.\n\n## Query Params\n\n- sort: 정렬 기준\n    \n    - popular: 인기글. 좋아요 수, 댓글 수, 작성일 순\n        \n    - latest: 최신글. 작성일 순\n        \n- page: 페이지 번호. 1부터 시작\n    \n- pageSize: 한 페이지에 가져올 게시글 개수\n    \n\n## Response\n\n- items: 게시글 목록\n    \n- items\\[\\].postId: 게시글 ID\n    \n- items\\[\\].spotId: 스팟 ID\n    \n- items\\[\\].spotName: 스팟 이름\n    \n- items\\[\\].region: 스팟 지역\n    \n- items\\[\\].title: 게시글 제목\n    \n- items\\[\\].contentPreview: 게시글 본문 미리보기\n    \n- items\\[\\].thumbnailUrl: 대표 이미지 URL\n    \n- items\\[\\].writer: 작성자 정보\n    \n- items\\[\\].createdAt: 작성 일시\n    \n- items\\[\\].commentCount: 댓글 수\n    \n- items\\[\\].likeCount: 좋아요 수\n    \n- items\\[\\].liked: 현재 로그인 사용자의 좋아요 여부\n    \n- page: 현재 페이지 번호\n    \n- pageSize: 페이지 크기\n    \n- totalCount: 전체 게시글 수\n    \n- hasNext: 다음 페이지 존재 여부\n    \n\n## Error\n\n- 400 Bad Request: 지원하지 않는 sort 또는 잘못된 페이지 요청"
+          },
+          "response": []
+        },
+        {
           "name": "지역 게시글 목록 조회",
           "request": {
             "method": "GET",

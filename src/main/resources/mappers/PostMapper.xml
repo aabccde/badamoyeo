@@ -75,7 +75,11 @@
 	<select id="findSpotPosts" resultType="badamoyeo_api.post.dto.PostListRow">
 		SELECT
 			p.id AS postId,
+			s.id AS spotId,
+			s.name AS spotName,
+			s.region,
 			p.title,
+			LEFT(p.content, 120) AS contentPreview,
 			(
 				SELECT pi.image_url
 				FROM post_images pi
@@ -91,6 +95,7 @@
 			p.like_count AS likeCount,
 			CASE WHEN pl.id IS NULL THEN FALSE ELSE TRUE END AS liked
 		FROM posts p
+		JOIN spots s ON s.id = p.spot_id
 		JOIN users u ON u.id = p.user_id
 		LEFT JOIN post_likes pl
 			ON pl.post_id = p.id
@@ -108,10 +113,61 @@
 			AND spot_id = #{spotId}
 	</select>
 
+	<select id="findPosts" resultType="badamoyeo_api.post.dto.PostListRow">
+		SELECT
+			p.id AS postId,
+			s.id AS spotId,
+			s.name AS spotName,
+			s.region,
+			p.title,
+			LEFT(p.content, 120) AS contentPreview,
+			(
+				SELECT pi.image_url
+				FROM post_images pi
+				WHERE pi.post_id = p.id
+				ORDER BY pi.sort_order ASC, pi.id ASC
+				LIMIT 1
+			) AS thumbnailUrl,
+			u.id AS writerId,
+			u.nickname AS writerNickname,
+			u.profile_image_url AS writerProfileImageUrl,
+			p.created_at AS createdAt,
+			p.comment_count AS commentCount,
+			p.like_count AS likeCount,
+			CASE WHEN pl.id IS NULL THEN FALSE ELSE TRUE END AS liked
+		FROM posts p
+		JOIN spots s ON s.id = p.spot_id
+		JOIN users u ON u.id = p.user_id
+		LEFT JOIN post_likes pl
+			ON pl.post_id = p.id
+			AND pl.user_id = #{userId}
+		WHERE p.status = 'ACTIVE'
+			AND s.active = 1
+		<choose>
+			<when test="sort == 'popular'">
+				ORDER BY p.like_count DESC, p.comment_count DESC, p.created_at DESC, p.id DESC
+			</when>
+			<otherwise>
+				ORDER BY p.created_at DESC, p.id DESC
+			</otherwise>
+		</choose>
+		LIMIT #{limit} OFFSET #{offset}
+	</select>
+
+	<select id="countPosts" resultType="long">
+		SELECT COUNT(*)
+		FROM posts p
+		JOIN spots s ON s.id = p.spot_id
+		WHERE p.status = 'ACTIVE'
+			AND s.active = 1
+	</select>
+
 	<select id="findPost" resultType="badamoyeo_api.post.dto.PostRow">
 		SELECT
 			p.id AS postId,
 			p.spot_id AS spotId,
+			s.name AS spotName,
+			s.region,
 			u.id AS writerId,
 			u.nickname AS writerNickname,
 			u.profile_image_url AS writerProfileImageUrl,
@@ -123,12 +179,14 @@
 			p.like_count AS likeCount,
 			CASE WHEN pl.id IS NULL THEN FALSE ELSE TRUE END AS liked
 		FROM posts p
+		JOIN spots s ON s.id = p.spot_id
 		JOIN users u ON u.id = p.user_id
 		LEFT JOIN post_likes pl
 			ON pl.post_id = p.id
 			AND pl.user_id = #{userId}
 		WHERE p.id = #{postId}
 			AND p.status = 'ACTIVE'
+			AND s.active = 1
 	</select>
 
 	<select id="findPostImages" resultType="badamoyeo_api.post.dto.PostImageRow">

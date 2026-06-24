@@ -44,6 +44,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/ai/spot-recommendations").permitAll()
 				.requestMatchers(HttpMethod.GET, "/spots/*/ai-analysis").permitAll()
 				.requestMatchers("/admin/**").hasRole("ADMIN")
+				.requestMatchers(HttpMethod.GET, "/posts").permitAll()
 				.requestMatchers(HttpMethod.GET, "/spots/*/posts").permitAll()
 				.requestMatchers(HttpMethod.GET, "/posts/*").permitAll()
 				.requestMatchers(HttpMethod.GET, "/posts/*/comments").permitAll()

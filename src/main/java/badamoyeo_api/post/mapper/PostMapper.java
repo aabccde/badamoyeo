@@ -34,6 +34,11 @@ public interface PostMapper {
 
 	long countSpotPosts(@Param("spotId") Long spotId);
 
+	List<PostListRow> findPosts(@Param("sort") String sort, @Param("userId") Long userId,
+		@Param("limit") int limit, @Param("offset") int offset);
+
+	long countPosts();
+
 	PostRow findPost(@Param("postId") Long postId, @Param("userId") Long userId);
 
 	List<PostImageRow> findPostImages(@Param("postId") Long postId);

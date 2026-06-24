@@ -29,6 +29,16 @@ public class PostController {
 		this.postService = postService;
 	}
 
+	@GetMapping("/posts")
+	public PageResponse<PostListResponse> posts(
+		@RequestParam(defaultValue = "latest") String sort,
+		@RequestParam(defaultValue = "1") int page,
+		@RequestParam(defaultValue = "20") int pageSize,
+		@AuthenticationPrincipal AuthUser authUser
+	) {
+		return postService.findPosts(sort, page, pageSize, userId(authUser));
+	}
+
 	@GetMapping("/spots/{spotId}/posts")
 	public PageResponse<PostListResponse> spotPosts(
 		@PathVariable Long spotId,

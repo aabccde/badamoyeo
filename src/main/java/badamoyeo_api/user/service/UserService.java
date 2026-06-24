@@ -189,7 +189,11 @@ public class UserService {
 	private PostListResponse toPostListResponse(PostListRow post) {
 		return new PostListResponse(
 			post.postId(),
+			post.spotId(),
+			post.spotName(),
+			post.region(),
 			post.title(),
+			post.contentPreview(),
 			post.thumbnailUrl(),
 			new PostWriterResponse(post.writerId(), post.writerNickname(), post.writerProfileImageUrl()),
 			post.createdAt(),

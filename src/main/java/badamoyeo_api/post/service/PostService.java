@@ -45,6 +45,18 @@ public class PostService {
 		return PageResponse.of(items, currentPage, size, totalCount);
 	}
 
+	public PageResponse<PostListResponse> findPosts(String sort, int page, int pageSize, Long userId) {
+		String normalizedSort = normalizeSort(sort);
+		int currentPage = Math.max(page, 1);
+		int size = Math.min(Math.max(pageSize, 1), 100);
+		List<PostListResponse> items = postMapper.findPosts(normalizedSort, userId, size, (currentPage - 1) * size)
+			.stream()
+			.map(this::toListResponse)
+			.toList();
+		long totalCount = postMapper.countPosts();
+		return PageResponse.of(items, currentPage, size, totalCount);
+	}
+
 	@Transactional
 	public PostCreateResponse createPost(Long spotId, Long userId, PostCreateRequest request) {
 		requireUser(userId);
@@ -107,6 +119,8 @@ public class PostService {
 		return new PostDetailResponse(
 			post.postId(),
 			post.spotId(),
+			post.spotName(),
+			post.region(),
 			post.title(),
 			post.content(),
 			imageUrls,
@@ -122,7 +136,11 @@ public class PostService {
 	private PostListResponse toListResponse(PostListRow post) {
 		return new PostListResponse(
 			post.postId(),
+			post.spotId(),
+			post.spotName(),
+			post.region(),
 			post.title(),
+			post.contentPreview(),
 			post.thumbnailUrl(),
 			new PostWriterResponse(post.writerId(), post.writerNickname(), post.writerProfileImageUrl()),
 			post.createdAt(),
@@ -130,6 +148,17 @@ public class PostService {
 			post.likeCount(),
 			post.liked()
 		);
+	}
+
+	private String normalizeSort(String sort) {
+		if (sort == null || sort.isBlank()) {
+			return "latest";
+		}
+		String normalizedSort = sort.trim().toLowerCase();
+		if (!List.of("latest", "popular").contains(normalizedSort)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unsupported post sort");
+		}
+		return normalizedSort;
 	}
 
 	private void replaceImages(Long postId, List<String> imageUrls) {
