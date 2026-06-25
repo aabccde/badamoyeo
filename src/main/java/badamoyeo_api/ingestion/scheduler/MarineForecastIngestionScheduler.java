@@ -47,7 +47,7 @@ public class MarineForecastIngestionScheduler {
 		ingestLatestForecasts("startup");
 	}
 
-	@Scheduled(cron = "${openapi.marine.ingestion.cron:0 10 3,9,15,21 * * *}", zone = "Asia/Seoul")
+	@Scheduled(cron = "${openapi.marine.ingestion.cron:0 10 0,6,12,18 * * *}", zone = "Asia/Seoul")
 	public void ingestLatestForecasts() {
 		ingestLatestForecasts("schedule");
 	}
