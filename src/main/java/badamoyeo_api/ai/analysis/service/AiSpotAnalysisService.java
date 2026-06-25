@@ -2,6 +2,10 @@ package badamoyeo_api.ai.analysis.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -41,6 +45,15 @@ public class AiSpotAnalysisService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "spot forecast not found");
 		}
 		return findOrCreate(source);
+	}
+
+	public Map<Long, AiSpotAnalysisResponse> findFreshAnalysesByForecastIds(List<Long> forecastIds) {
+		if (forecastIds == null || forecastIds.isEmpty()) {
+			return Map.of();
+		}
+		return analysisMapper.findFreshAnalyses(forecastIds).stream()
+			.map(this::toResponse)
+			.collect(Collectors.toMap(AiSpotAnalysisResponse::forecastId, Function.identity()));
 	}
 
 	private AiSpotAnalysisResponse findOrCreate(AiSpotAnalysisSource source) {

@@ -75,9 +75,13 @@ public class SpotService {
 		if (detail == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "spot not found");
 		}
-		List<SpotForecastResponse> forecasts = spotMapper.findSpotForecasts(List.of(spotId), date, null)
-			.parallelStream()
-			.map(row -> row.toResponse(toSpotAnalysis(analysisService.findOrCreateByForecastId(row.forecastId()))))
+		List<SpotForecastRow> forecastRows = spotMapper.findSpotForecasts(List.of(spotId), date, null);
+		Map<Long, AiSpotAnalysisResponse> analysesByForecastId = analysisService.findFreshAnalysesByForecastIds(
+			forecastRows.stream().map(SpotForecastRow::forecastId).toList()
+		);
+		List<SpotForecastResponse> forecasts = forecastRows
+			.stream()
+			.map(row -> row.toResponse(toSpotAnalysis(analysesByForecastId.get(row.forecastId()))))
 			.toList();
 		return detail.toResponse(forecasts);
 	}
@@ -164,6 +168,9 @@ public class SpotService {
 	}
 
 	private SpotForecastAiAnalysisResponse toSpotAnalysis(AiSpotAnalysisResponse analysis) {
+		if (analysis == null) {
+			return null;
+		}
 		return new SpotForecastAiAnalysisResponse(
 			analysis.recommended(),
 			analysis.recommendationReason()

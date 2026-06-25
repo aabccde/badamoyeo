@@ -8,7 +8,6 @@ import org.apache.ibatis.annotations.Param;
 
 import badamoyeo_api.ai.recommendation.dto.AiRecommendationCandidate;
 import badamoyeo_api.ai.recommendation.dto.AiRecommendationSaveRequest;
-import badamoyeo_api.ai.recommendation.dto.AiSpotRecommendationResponse;
 
 @Mapper
 public interface AiRecommendationMapper {
@@ -34,10 +33,4 @@ public interface AiRecommendationMapper {
 	);
 
 	void insertRecommendations(@Param("recommendations") List<AiRecommendationSaveRequest> recommendations);
-
-	List<AiSpotRecommendationResponse> findRecommendations(
-		@Param("experience") String experience,
-		@Param("targetDate") LocalDate targetDate,
-		@Param("userId") Long userId
-	);
 }

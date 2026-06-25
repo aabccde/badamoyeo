@@ -123,17 +123,7 @@ AI 호출이나 결과 검증이 실패하면 기존 추천은 유지됩니다.
 mysql -u {user} -p {database} < docs/ai-recommendations.sql
 ```
 
-최신 추천 조회:
-
-```http
-GET /ai/spot-recommendations?experience=surfing
-GET /ai/spot-recommendations?experience=surfing&targetDate=2026-06-23
-```
-
-`targetDate`를 전달하면 해당 예보일 추천을 조회하고, 생략하면 가장 최근 생성된 추천을 조회합니다.
-응답의 `items`에는 카드 정보와 함께 AI가 생성한 `rank`, `reason`, `generatedAt`이 포함됩니다.
-
-메인 대시보드에서는 기존 카드 조회 API에 `sort=ai`를 전달합니다.
+AI 추천은 기존 카드 조회 API에 `sort=ai`를 전달해 조회합니다.
 
 ```http
 GET /dashboard?experience=surfing&targetDate=2026-06-23&sort=ai&limit=6
@@ -146,8 +136,8 @@ GET /dashboard?experience=surfing&targetDate=2026-06-23&sort=ai&limit=6
 
 장소 목록, 대시보드 카드, 즐겨찾기 장소 목록, 장소 상세 응답에는 선택 날짜의
 모든 시간대 예보가 `forecasts` 배열로 포함됩니다.
-장소 상세 조회에서는 각 예보의 `aiAnalysis`에 해당 시간대 AI 분석이 포함됩니다.
-저장된 분석이 없거나 원본 예보가 갱신된 경우에만 AI를 호출하고 결과를 저장합니다.
+장소 상세 조회에서는 저장된 최신 AI 분석이 있는 예보에만 `aiAnalysis`를 포함합니다.
+저장된 분석이 없거나 원본 예보가 갱신된 경우에는 상세 조회 속도를 위해 `aiAnalysis`를 `null`로 반환합니다.
 
 ```json
 {
@@ -184,7 +174,7 @@ GET /users/me/favorite-spots?targetDate=2026-06-23&timeSlot=오후&page=1&pageSi
 
 ## 상세페이지 AI 분석
 
-상세페이지에서 처음 요청된 장소·예보만 `gpt-5-mini`로 분석하고 DB에 저장합니다.
+상세페이지에서 분석이 필요한 장소·예보만 별도 AI 분석 API로 요청해 `gpt-5-mini`로 분석하고 DB에 저장합니다.
 같은 예보가 다시 요청되면 저장된 결과를 반환하며, 해당 예보 행의 `updated_at`이 변경된 경우에만 다시 생성합니다.
 AI 입력에는 정제된 `metrics`, 종합지수, 날씨, 물때만 사용하고 `rawData`는 제외합니다.
 
@@ -193,8 +183,8 @@ GET /spots/{spotId}/ai-analysis
 GET /spots/{spotId}/ai-analysis?targetDate=2026-06-23
 ```
 
-상세 응답의 각 시간대 `aiAnalysis`에는 `recommended`와
-1~2문장으로 작성된 `recommendationReason`이 포함됩니다.
+AI 분석 API 응답에는 `recommended`와 1문장으로 작성된 `recommendationReason`이 포함됩니다.
+이후 상세 조회에서는 저장된 최신 분석만 각 시간대 `aiAnalysis`에 포함됩니다.
 
 ## 테스트
 

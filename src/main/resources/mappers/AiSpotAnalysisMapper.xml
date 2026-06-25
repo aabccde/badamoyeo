@@ -80,6 +80,29 @@
 		WHERE a.forecast_id = #{forecastId}
 	</select>
 
+	<select id="findFreshAnalyses" resultType="badamoyeo_api.ai.analysis.dto.AiSpotAnalysisRow">
+		SELECT
+			a.spot_id AS spotId,
+			a.forecast_id AS forecastId,
+			s.experience,
+			s.name AS spotName,
+			mf.forecast_date AS forecastDate,
+			mf.time_slot AS timeSlot,
+			mf.total_index AS totalIndex,
+			a.recommended,
+			a.recommendation_reason AS recommendationReason,
+			a.source_forecast_updated_at AS sourceForecastUpdatedAt,
+			a.generated_at AS generatedAt
+		FROM ai_spot_analyses a
+		JOIN spots s ON s.id = a.spot_id
+		JOIN marine_forecasts mf ON mf.id = a.forecast_id
+		WHERE a.forecast_id IN
+		<foreach collection="forecastIds" item="forecastId" open="(" separator="," close=")">
+			#{forecastId}
+		</foreach>
+			AND a.source_forecast_updated_at = mf.updated_at
+	</select>
+
 	<insert id="upsertAnalysis">
 		INSERT INTO ai_spot_analyses (
 			spot_id,

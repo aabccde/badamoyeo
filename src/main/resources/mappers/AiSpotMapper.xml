@@ -43,10 +43,18 @@
 			AND s.experience = #{experience}
 		</if>
 		<if test="region != null and region != ''">
-			AND s.region LIKE CONCAT('%', #{region}, '%')
+			AND (
+				s.region LIKE CONCAT('%', #{region}, '%')
+				OR s.name LIKE CONCAT('%', #{region}, '%')
+				OR REPLACE(s.region, ' ', '') LIKE CONCAT('%', REPLACE(#{region}, ' ', ''), '%')
+				OR REPLACE(s.name, ' ', '') LIKE CONCAT('%', REPLACE(#{region}, ' ', ''), '%')
+			)
 		</if>
 		<if test="keyword != null and keyword != ''">
-			AND s.name LIKE CONCAT('%', #{keyword}, '%')
+			AND (
+				s.name LIKE CONCAT('%', #{keyword}, '%')
+				OR REPLACE(s.name, ' ', '') LIKE CONCAT('%', REPLACE(#{keyword}, ' ', ''), '%')
+			)
 		</if>
 		<choose>
 			<when test="sort == 'worst'">

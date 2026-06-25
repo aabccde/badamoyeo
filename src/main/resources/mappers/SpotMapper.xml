@@ -120,6 +120,12 @@
 	<select id="countSpotCards" resultType="long">
 		SELECT COUNT(*)
 		FROM spots s
+		<if test="sort == 'ai'">
+			JOIN ai_spot_recommendations ar
+				ON ar.spot_id = s.id
+				AND ar.experience = s.experience
+				AND ar.forecast_date = #{targetDate}
+		</if>
 		WHERE s.active = 1
 			AND s.experience = #{experience}
 		<if test="region != null and region != ''">

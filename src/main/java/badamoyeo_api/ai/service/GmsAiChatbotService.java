@@ -16,12 +16,50 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import badamoyeo_api.ai.dto.ChatCompletionResponse;
+import badamoyeo_api.ai.dto.AiSpotSearchResult;
 import badamoyeo_api.ai.gms.GmsResponsesClient;
 import badamoyeo_api.ai.tool.SpotRecommendationTools;
 
 @Service
 public class GmsAiChatbotService implements ChatbotService {
 	private static final String TOOL_NAME = "searchMarineSpots";
+	private static final String OUT_OF_SCOPE_RESPONSE = "바다모여에서는 바다 여행, 해수욕, 갯벌 체험, 스쿠버다이빙, 낚시, 서핑 관련 질문만 답변할 수 있어요.";
+	private static final List<String> IN_SCOPE_KEYWORDS = List.of(
+		"바다", "해양", "레저", "여행", "해수욕", "해변", "해수욕장", "갯벌", "스쿠버", "다이빙",
+		"낚시", "서핑", "물때", "파고", "수온", "풍속", "날씨", "예보", "파도", "조류",
+		"제주", "부산", "강원", "강릉", "양양", "속초", "인천", "충남", "태안", "보령",
+		"전남", "신안", "무안", "완도", "여수", "통영", "거제", "울릉", "포항", "울진",
+		"동해", "서해", "남해"
+	);
+	private static final List<String> OUT_OF_SCOPE_KEYWORDS = List.of(
+		"c언어", "c 언어", "java", "자바", "python", "파이썬", "javascript", "자바스크립트",
+		"코딩", "프로그래밍", "알고리즘", "sql", "html", "css", "코드", "컴파일",
+		"주식", "코인", "투자", "수학", "영어", "번역", "역사", "요리", "점심", "저녁"
+	);
+	private static final Map<String, String> METRIC_LABELS = Map.ofEntries(
+		Map.entry("airTemperature", "기온"),
+		Map.entry("airTemperatureMin", "최저 기온"),
+		Map.entry("airTemperatureMax", "최고 기온"),
+		Map.entry("waterTemperature", "수온"),
+		Map.entry("waterTemperatureMin", "최저 수온"),
+		Map.entry("waterTemperatureMax", "최고 수온"),
+		Map.entry("waveHeight", "파고"),
+		Map.entry("waveHeightMin", "최저 파고"),
+		Map.entry("waveHeightMax", "최고 파고"),
+		Map.entry("wavePeriod", "파주기"),
+		Map.entry("windSpeed", "풍속"),
+		Map.entry("windSpeedMin", "최저 풍속"),
+		Map.entry("windSpeedMax", "최고 풍속"),
+		Map.entry("currentSpeed", "유속"),
+		Map.entry("currentSpeedMin", "최저 유속"),
+		Map.entry("currentSpeedMax", "최고 유속"),
+		Map.entry("openStatus", "개장 상태"),
+		Map.entry("targetFish", "대상 어종"),
+		Map.entry("availableStartTime", "체험 시작 가능 시간"),
+		Map.entry("availableEndTime", "체험 종료 가능 시간"),
+		Map.entry("tideStage", "물때"),
+		Map.entry("level", "등급")
+	);
 	private static final String SYSTEM_PROMPT = """
 		당신은 대한민국 해양 레저 앱 '바다모여'의 안내 챗봇입니다.
 		바다 여행, 해수욕, 갯벌 체험, 스쿠버다이빙, 낚시, 서핑에 관해
@@ -91,38 +129,37 @@ public class GmsAiChatbotService implements ChatbotService {
 
 	@Override
 	public ChatCompletionResponse complete(String message) {
-		JsonNode firstResponse = responsesClient.execute(initialRequest(message.trim()));
-		List<Map<String, Object>> toolOutputs = executeToolCalls(firstResponse);
+		String normalizedMessage = message == null ? "" : message.trim();
+		if (isOutOfScope(normalizedMessage)) {
+			return new ChatCompletionResponse(OUT_OF_SCOPE_RESPONSE, Instant.now());
+		}
+
+		JsonNode firstResponse = responsesClient.execute(initialRequest(normalizedMessage));
+		List<ToolSearchResult> toolOutputs = executeToolCalls(firstResponse);
 		String content;
 
 		if (toolOutputs.isEmpty()) {
 			content = responsesClient.outputText(firstResponse);
 		} else {
-			Map<String, Object> followUp = responsesClient.baseRequest(
-				model,
-				SYSTEM_PROMPT,
-				finalAnswerInput(toolOutputs),
-				700
-			);
-			followUp.put("previous_response_id", firstResponse.path("id").asText());
-			content = responsesClient.outputText(responsesClient.execute(followUp));
+			content = formatToolAnswer(toolOutputs);
 		}
 
 		return new ChatCompletionResponse(normalizeForChatBubble(content), Instant.now());
 	}
 
-	private List<Map<String, Object>> finalAnswerInput(List<Map<String, Object>> toolOutputs) {
-		List<Map<String, Object>> input = new ArrayList<>(toolOutputs);
-		input.add(Map.of(
-			"role", "user",
-			"content", """
-					도구 결과를 바탕으로 사용자에게 보여 줄 최종 답변만 작성하세요.
-					함수 호출, 인자, JSON, 조회 과정, 영문 필드명은 출력하지 마세요.
-					500자 이내, 최대 7문장, 장소 최대 2곳 규칙을 반드시 지키세요.
-					장소별로 관련 지표와 그 조건이 판단에 미친 이유를 친절히 설명하세요.
-					"""
-		));
-		return input;
+	private boolean isOutOfScope(String message) {
+		if (message.isBlank()) {
+			return true;
+		}
+
+		String normalized = message.toLowerCase().replaceAll("\\s+", " ");
+		boolean inScope = IN_SCOPE_KEYWORDS.stream().anyMatch(normalized::contains);
+		boolean explicitlyOutOfScope = OUT_OF_SCOPE_KEYWORDS.stream().anyMatch(normalized::contains);
+		if (explicitlyOutOfScope && !inScope) {
+			return true;
+		}
+
+		return !inScope && normalized.length() > 12;
 	}
 
 	private String normalizeForChatBubble(String content) {
@@ -164,8 +201,8 @@ public class GmsAiChatbotService implements ChatbotService {
 		return request;
 	}
 
-	private List<Map<String, Object>> executeToolCalls(JsonNode response) {
-		List<Map<String, Object>> outputs = new ArrayList<>();
+	private List<ToolSearchResult> executeToolCalls(JsonNode response) {
+		List<ToolSearchResult> outputs = new ArrayList<>();
 		for (JsonNode output : response.path("output")) {
 			if (!"function_call".equals(output.path("type").asText())) {
 				continue;
@@ -175,7 +212,7 @@ public class GmsAiChatbotService implements ChatbotService {
 			}
 			try {
 				JsonNode arguments = objectMapper.readTree(output.path("arguments").asText("{}"));
-				Object result = spotRecommendationTools.searchMarineSpots(
+				List<AiSpotSearchResult> result = spotRecommendationTools.searchMarineSpots(
 					arguments.path("experience").asText(""),
 					arguments.path("region").asText(""),
 					arguments.path("keyword").asText(""),
@@ -183,10 +220,9 @@ public class GmsAiChatbotService implements ChatbotService {
 					arguments.path("sort").asText("best"),
 					Math.min(arguments.path("limit").asInt(2), 2)
 				);
-				outputs.add(Map.of(
-					"type", "function_call_output",
-					"call_id", output.path("call_id").asText(),
-					"output", objectMapper.writeValueAsString(result)
+				outputs.add(new ToolSearchResult(
+					arguments.path("sort").asText("best"),
+					result
 				));
 			} catch (ResponseStatusException exception) {
 				throw exception;
@@ -195,6 +231,99 @@ public class GmsAiChatbotService implements ChatbotService {
 			}
 		}
 		return outputs;
+	}
+
+	private String formatToolAnswer(List<ToolSearchResult> toolResults) {
+		List<AiSpotSearchResult> items = toolResults.stream()
+			.flatMap(result -> result.items().stream())
+			.limit(2)
+			.toList();
+		if (items.isEmpty()) {
+			return "조건에 맞는 예보 데이터를 찾지 못했어요.";
+		}
+
+		boolean recommendationRequest = toolResults.stream().noneMatch(result -> "worst".equals(result.sort()));
+		StringBuilder answer = new StringBuilder();
+		if (recommendationRequest && items.stream().noneMatch(this::isRecommended)) {
+			answer.append("해당 날짜에는 추천할 장소가 없습니다.");
+		} else if (recommendationRequest) {
+			answer.append("추천할 만한 장소입니다.");
+		} else {
+			answer.append("피하는 편이 좋은 장소입니다.");
+		}
+
+		for (AiSpotSearchResult item : items) {
+			answer.append("\n- ")
+				.append(item.spotName())
+				.append("(")
+				.append(blankToDefault(item.timeSlot(), "예보"))
+				.append(") - ")
+				.append(blankToDefault(item.totalIndex(), "지수 정보 없음"))
+				.append(". ")
+				.append(reason(item));
+		}
+		answer.append("\n방문 전 최신 예보와 현장 통제를 확인하세요.");
+		return answer.toString();
+	}
+
+	private boolean isRecommended(AiSpotSearchResult item) {
+		return "매우좋음".equals(item.totalIndex()) || "좋음".equals(item.totalIndex());
+	}
+
+	private String reason(AiSpotSearchResult item) {
+		List<String> facts = new ArrayList<>();
+		if (item.weather() != null && !item.weather().isBlank()) {
+			facts.add("날씨 " + item.weather());
+		}
+		if (item.metrics() != null) {
+			item.metrics().entrySet().stream()
+				.filter(entry -> entry.getValue() != null && !isDuplicatedMetric(entry.getKey()))
+				.limit(2)
+				.map(entry -> metricLabel(entry.getKey()) + " " + metricValue(entry.getKey(), entry.getValue()))
+				.forEach(facts::add);
+		}
+		if (item.tide() != null && !item.tide().isBlank()) {
+			facts.add("물때 " + item.tide());
+		}
+		if (facts.isEmpty()) {
+			return "저장된 예보 기준으로 판단했습니다.";
+		}
+		return String.join(", ", facts.stream().limit(2).toList()) + " 기준으로 판단했습니다.";
+	}
+
+	private boolean isDuplicatedMetric(String key) {
+		return "weather".equals(key) || "tide".equals(key);
+	}
+
+	private String metricLabel(String key) {
+		return METRIC_LABELS.getOrDefault(key, key);
+	}
+
+	private String metricValue(String key, Object value) {
+		String text = String.valueOf(value);
+		if (text.isBlank() || text.matches(".*[가-힣a-zA-Z%/].*")) {
+			return text;
+		}
+		if (key.contains("Temperature")) {
+			return text + "도";
+		}
+		if (key.contains("waveHeight")) {
+			return text + "m";
+		}
+		if (key.contains("windSpeed")) {
+			return text + "m/s";
+		}
+		if (key.contains("currentSpeed")) {
+			return text + "m/s";
+		}
+		if ("wavePeriod".equals(key)) {
+			return text + "초";
+		}
+		return text;
+	}
+
+	private String blankToDefault(String value, String defaultValue) {
+		return value == null || value.isBlank() ? defaultValue : value;
 	}
 
 	private Map<String, Object> searchMarineSpotsTool() {
@@ -239,5 +368,11 @@ public class GmsAiChatbotService implements ChatbotService {
 				"additionalProperties", false
 			)
 		);
+	}
+
+	private record ToolSearchResult(
+		String sort,
+		List<AiSpotSearchResult> items
+	) {
 	}
 }

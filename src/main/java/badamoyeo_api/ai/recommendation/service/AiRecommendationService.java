@@ -17,8 +17,6 @@ import org.springframework.web.server.ResponseStatusException;
 import badamoyeo_api.ai.recommendation.dto.AiRecommendationCandidate;
 import badamoyeo_api.ai.recommendation.dto.AiRecommendationItem;
 import badamoyeo_api.ai.recommendation.dto.AiRecommendationSaveRequest;
-import badamoyeo_api.ai.recommendation.dto.AiSpotRecommendationResponse;
-import badamoyeo_api.ai.recommendation.dto.AiSpotRecommendationsResponse;
 import badamoyeo_api.ai.recommendation.mapper.AiRecommendationMapper;
 import badamoyeo_api.spot.dto.Experience;
 
@@ -98,21 +96,6 @@ public class AiRecommendationService {
 			recommendationMapper.deleteRecommendations(experience, recommendationDate);
 			recommendationMapper.insertRecommendations(recommendations);
 		});
-	}
-
-	public AiSpotRecommendationsResponse findRecommendations(String experience, LocalDate targetDate, Long userId) {
-		String normalizedExperience = Experience.from(experience).apiValue();
-		List<AiSpotRecommendationResponse> items =
-			recommendationMapper.findRecommendations(normalizedExperience, targetDate, userId);
-		if (items.isEmpty()) {
-			return new AiSpotRecommendationsResponse(normalizedExperience, null, null, List.of());
-		}
-		return new AiSpotRecommendationsResponse(
-			normalizedExperience,
-			items.getFirst().forecastDate(),
-			items.getFirst().generatedAt(),
-			items
-		);
 	}
 
 	private List<AiRecommendationSaveRequest> validateAndConvert(
